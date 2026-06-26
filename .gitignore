@@ -1,0 +1,14 @@
+node_modules/
+dist/
+
+.env
+.env.local
+
+*.tsbuildinfo
+vite.stdout.log
+vite.stderr.log
+
+src-tauri/target/
+
+.DS_Store
+Thumbs.db

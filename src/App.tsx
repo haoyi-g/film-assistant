@@ -1,0 +1,148 @@
+import { useEffect, useState, type ChangeEvent } from 'react'
+import { styles, type StyleProfile } from './data/mockStyles'
+import { checkDesktopEngine, openLocalPhoto, runningInDesktop } from './native/desktop'
+import { Workspace } from './pages/Workspace'
+
+export function App() {
+  const [fileName, setFileName] = useState('No photo selected')
+  const [previewUrl, setPreviewUrl] = useState('')
+  const [browserObjectUrl, setBrowserObjectUrl] = useState('')
+  const [desktopError, setDesktopError] = useState<string | null>(null)
+  const [desktopMessage, setDesktopMessage] = useState<string | null>(null)
+  const [selectedStyle, setSelectedStyle] = useState<StyleProfile>(styles[0])
+  const [selectedVersion, setSelectedVersion] = useState('B')
+  const [styleStrength, setStyleStrength] = useState(62)
+  const [shadowDensity, setShadowDensity] = useState(36)
+  const [colorDensity, setColorDensity] = useState(28)
+  const [grainStrength, setGrainStrength] = useState(18)
+
+  const [exposure, setExposure] = useState(0)
+  const [contrast, setContrast] = useState(20)
+  const [shadows, setShadows] = useState(10)
+  const [highlights, setHighlights] = useState(-15)
+  const [warmth, setWarmth] = useState(8)
+  const [saturation, setSaturation] = useState(12)
+
+  const desktop = runningInDesktop()
+
+  useEffect(() => {
+    return () => {
+      if (browserObjectUrl) URL.revokeObjectURL(browserObjectUrl)
+    }
+  }, [browserObjectUrl])
+
+  const handleBrowserImage = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const nextUrl = URL.createObjectURL(file)
+    setBrowserObjectUrl(nextUrl)
+    setFileName(file.name)
+    setPreviewUrl(nextUrl)
+    setDesktopError(null)
+  }
+
+  const handleOpenDesktopImage = async () => {
+    setDesktopError(null)
+    setDesktopMessage(null)
+    try {
+      const photo = await openLocalPhoto()
+      if (!photo) return
+      setFileName(photo.fileName)
+      setPreviewUrl(photo.previewUrl)
+    } catch (error) {
+      setDesktopError(
+        error instanceof Error ? error.message : String(error),
+      )
+    }
+  }
+
+  const handleDesktopHealthCheck = async () => {
+    setDesktopError(null)
+    setDesktopMessage(null)
+
+    if (!desktop) {
+      setDesktopMessage('This test only runs inside the Tauri desktop window.')
+      return
+    }
+
+    try {
+      const health = await checkDesktopEngine()
+      setDesktopMessage(
+        health.decoderPath
+          ? `${health.message} Decoder: ${health.decoderPath}`
+          : health.message,
+      )
+    } catch (error) {
+      setDesktopError(
+        error instanceof Error ? error.message : String(error),
+      )
+    }
+  }
+
+  const handleStyleChange = (style: StyleProfile) => {
+    setSelectedStyle(style)
+    setExposure(style.adjustments.exposure)
+    setContrast(style.adjustments.contrast)
+    setShadows(style.adjustments.shadows)
+    setHighlights(style.adjustments.highlights)
+    setWarmth(style.adjustments.warmth)
+    setSaturation(style.adjustments.saturation)
+  }
+
+  return (
+    <main className="app-shell">
+      <header className="app-header">
+        <div>
+          <span className="eyebrow">LOCAL COLOR WORKSPACE</span>
+          <h1>Film Assistant</h1>
+        </div>
+        <div className="desktop-tools">
+          <div className="desktop-state">
+            <span className={`status-dot ${desktop ? 'is-online' : ''}`} />
+            {desktop ? 'Desktop RAW engine' : 'Browser preview mode'}
+          </div>
+          <button type="button" className="engine-test" onClick={handleDesktopHealthCheck}>
+            Test engine
+          </button>
+        </div>
+      </header>
+
+      {desktopError && <div className="error-banner">{desktopError}</div>}
+      {desktopMessage && <div className="info-banner">{desktopMessage}</div>}
+
+      <Workspace
+        fileName={fileName}
+        previewUrl={previewUrl}
+        selectedStyle={selectedStyle}
+        selectedVersion={selectedVersion}
+        styleStrength={styleStrength}
+        shadowDensity={shadowDensity}
+        colorDensity={colorDensity}
+        grainStrength={grainStrength}
+        exposure={exposure}
+        contrast={contrast}
+        shadows={shadows}
+        highlights={highlights}
+        warmth={warmth}
+        saturation={saturation}
+        onImageChange={handleBrowserImage}
+        onOpenDesktopImage={desktop ? handleOpenDesktopImage : undefined}
+        onTestDesktopEngine={handleDesktopHealthCheck}
+        onStyleChange={handleStyleChange}
+        onVersionChange={setSelectedVersion}
+        onStyleStrengthChange={setStyleStrength}
+        onShadowDensityChange={setShadowDensity}
+        onColorDensityChange={setColorDensity}
+        onGrainStrengthChange={setGrainStrength}
+        onExposureChange={setExposure}        
+        onContrastChange={setContrast}
+        onShadowsChange={setShadows}
+        onHighlightsChange={setHighlights}
+        onWarmthChange={setWarmth}
+        onSaturationChange={setSaturation}
+
+      />
+    </main>
+  )
+}
