@@ -50,6 +50,25 @@ type JpegRange = {
   end: number
 }
 
+type ExportHistoryItem = {
+  id: string
+  createdAt: string
+  fileName: string
+  lutName: string
+  rotation: number
+  adjustments: {
+    exposure: number
+    contrast: number
+    shadows: number
+    highlights: number
+    warmth: number
+    saturation: number
+    styleStrength: number
+  }
+}
+
+const EXPORT_HISTORY_KEY = 'film-assistant-export-history'
+
 async function extractLargestEmbeddedJpeg(file: File): Promise<Blob | null> {
   const bytes = new Uint8Array(await file.arrayBuffer())
   const candidates: JpegRange[] = []
@@ -103,6 +122,7 @@ export function Workspace(props: WorkspaceProps) {
   const [previewMode, setPreviewMode] = useState<PreviewMode>('result')
   const [compareSplit, setCompareSplit] = useState(50)
   const [isExporting, setIsExporting] = useState(false)
+  const [exportHistory, setExportHistory] = useState<ExportHistoryItem[]>([])
   const rawPreviewUrlRef = useRef('')
 
   const effectivePreviewUrl = isRawSelected
@@ -115,6 +135,17 @@ export function Workspace(props: WorkspaceProps) {
   useEffect(() => {
     return () => {
       if (rawPreviewUrlRef.current) URL.revokeObjectURL(rawPreviewUrlRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    const savedHistory = window.localStorage.getItem(EXPORT_HISTORY_KEY)
+    if (!savedHistory) return
+
+    try {
+      setExportHistory(JSON.parse(savedHistory) as ExportHistoryItem[])
+    } catch {
+      window.localStorage.removeItem(EXPORT_HISTORY_KEY)
     }
   }, [])
 
@@ -215,6 +246,7 @@ export function Workspace(props: WorkspaceProps) {
     if (!effectivePreviewUrl) return
 
     const baseName = effectiveFileName.replace(/\.[^.]+$/, '') || 'photo'
+    const exportFileName = `${baseName}-film-preview.jpg`
 
     setIsExporting(true)
     let highQualityObjectUrl = ''
@@ -233,9 +265,35 @@ export function Workspace(props: WorkspaceProps) {
 
       await exportImageFile({
         imageUrl: highQualityObjectUrl,
-        fileName: `${baseName}-film-preview.jpg`,
+        fileName: exportFileName,
         rotation,
         quality: 0.98,
+      })
+
+      const nextRecord: ExportHistoryItem = {
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        fileName: exportFileName,
+        lutName: props.selectedStyle.name,
+        rotation,
+        adjustments: {
+          exposure: props.exposure,
+          contrast: props.contrast,
+          shadows: props.shadows,
+          highlights: props.highlights,
+          warmth: props.warmth,
+          saturation: props.saturation,
+          styleStrength: props.styleStrength,
+        },
+      }
+
+      setExportHistory((currentHistory) => {
+        const nextHistory = [nextRecord, ...currentHistory].slice(0, 8)
+        window.localStorage.setItem(
+          EXPORT_HISTORY_KEY,
+          JSON.stringify(nextHistory),
+        )
+        return nextHistory
       })
     } catch (error) {
       window.alert(
@@ -625,32 +683,30 @@ export function Workspace(props: WorkspaceProps) {
 
           <section className="panel">
             <div className="panel-head">
-              <h2>Edit Vector</h2>
-              <span>Version {props.selectedVersion}</span>
+              <h2>Export History</h2>
+              <span>{exportHistory.length ? `${exportHistory.length} saved` : 'Empty'}</span>
             </div>
             <div className="panel-body">
-              <ul className="param-list">
-                <li>
-                  <span>Contrast</span>
-                  <strong>+18</strong>
-                </li>
-                <li>
-                  <span>Shadows</span>
-                  <strong>-12</strong>
-                </li>
-                <li>
-                  <span>Blacks</span>
-                  <strong>-16</strong>
-                </li>
-                <li>
-                  <span>Vibrance</span>
-                  <strong>+10</strong>
-                </li>
-                <li>
-                  <span>Grain</span>
-                  <strong>+12</strong>
-                </li>
-              </ul>
+              {exportHistory.length ? (
+                <ul className="export-history-list">
+                  {exportHistory.map((item) => (
+                    <li key={item.id}>
+                      <div className="export-history-title">
+                        <span>{item.fileName}</span>
+                        <strong>{new Date(item.createdAt).toLocaleTimeString()}</strong>
+                      </div>
+                      <div className="export-history-meta">
+                        {item.lutName} · E {item.adjustments.exposure} · C{' '}
+                        {item.adjustments.contrast} · W {item.adjustments.warmth}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="empty-state compact-empty">
+                  Export a preview to record its LUT and adjustment values.
+                </div>
+              )}
             </div>
           </section>
         </aside>

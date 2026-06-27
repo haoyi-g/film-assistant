@@ -1,9 +1,13 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
 import { styles, type StyleProfile } from './data/mockStyles'
 import { checkDesktopEngine, openLocalPhoto, runningInDesktop } from './native/desktop'
+import { StyleLearning } from './pages/StyleLearning'
 import { Workspace } from './pages/Workspace'
 
+type AppView = 'workspace' | 'learning'
+
 export function App() {
+  const [activeView, setActiveView] = useState<AppView>('workspace')
   const [fileName, setFileName] = useState('No photo selected')
   const [previewUrl, setPreviewUrl] = useState('')
   const [browserObjectUrl, setBrowserObjectUrl] = useState('')
@@ -82,6 +86,10 @@ export function App() {
 
   const handleStyleChange = (style: StyleProfile) => {
     setSelectedStyle(style)
+    const fullStrengthStyles = ['rgb-screen', 'infrared-magenta']
+    setStyleStrength(
+      style.id === 'original' ? 0 : fullStrengthStyles.includes(style.id) ? 100 : 62,
+    )
     setExposure(style.adjustments.exposure)
     setContrast(style.adjustments.contrast)
     setShadows(style.adjustments.shadows)
@@ -98,6 +106,22 @@ export function App() {
           <h1>Film Assistant</h1>
         </div>
         <div className="desktop-tools">
+          <div className="app-view-tabs">
+            <button
+              className={activeView === 'workspace' ? 'is-active' : ''}
+              type="button"
+              onClick={() => setActiveView('workspace')}
+            >
+              Color Workspace
+            </button>
+            <button
+              className={activeView === 'learning' ? 'is-active' : ''}
+              type="button"
+              onClick={() => setActiveView('learning')}
+            >
+              Style Learning
+            </button>
+          </div>
           <div className="desktop-state">
             <span className={`status-dot ${desktop ? 'is-online' : ''}`} />
             {desktop ? 'Desktop RAW engine' : 'Browser preview mode'}
@@ -111,38 +135,41 @@ export function App() {
       {desktopError && <div className="error-banner">{desktopError}</div>}
       {desktopMessage && <div className="info-banner">{desktopMessage}</div>}
 
-      <Workspace
-        fileName={fileName}
-        previewUrl={previewUrl}
-        selectedStyle={selectedStyle}
-        selectedVersion={selectedVersion}
-        styleStrength={styleStrength}
-        shadowDensity={shadowDensity}
-        colorDensity={colorDensity}
-        grainStrength={grainStrength}
-        exposure={exposure}
-        contrast={contrast}
-        shadows={shadows}
-        highlights={highlights}
-        warmth={warmth}
-        saturation={saturation}
-        onImageChange={handleBrowserImage}
-        onOpenDesktopImage={desktop ? handleOpenDesktopImage : undefined}
-        onTestDesktopEngine={handleDesktopHealthCheck}
-        onStyleChange={handleStyleChange}
-        onVersionChange={setSelectedVersion}
-        onStyleStrengthChange={setStyleStrength}
-        onShadowDensityChange={setShadowDensity}
-        onColorDensityChange={setColorDensity}
-        onGrainStrengthChange={setGrainStrength}
-        onExposureChange={setExposure}        
-        onContrastChange={setContrast}
-        onShadowsChange={setShadows}
-        onHighlightsChange={setHighlights}
-        onWarmthChange={setWarmth}
-        onSaturationChange={setSaturation}
-
-      />
+      {activeView === 'workspace' ? (
+        <Workspace
+          fileName={fileName}
+          previewUrl={previewUrl}
+          selectedStyle={selectedStyle}
+          selectedVersion={selectedVersion}
+          styleStrength={styleStrength}
+          shadowDensity={shadowDensity}
+          colorDensity={colorDensity}
+          grainStrength={grainStrength}
+          exposure={exposure}
+          contrast={contrast}
+          shadows={shadows}
+          highlights={highlights}
+          warmth={warmth}
+          saturation={saturation}
+          onImageChange={handleBrowserImage}
+          onOpenDesktopImage={desktop ? handleOpenDesktopImage : undefined}
+          onTestDesktopEngine={handleDesktopHealthCheck}
+          onStyleChange={handleStyleChange}
+          onVersionChange={setSelectedVersion}
+          onStyleStrengthChange={setStyleStrength}
+          onShadowDensityChange={setShadowDensity}
+          onColorDensityChange={setColorDensity}
+          onGrainStrengthChange={setGrainStrength}
+          onExposureChange={setExposure}
+          onContrastChange={setContrast}
+          onShadowsChange={setShadows}
+          onHighlightsChange={setHighlights}
+          onWarmthChange={setWarmth}
+          onSaturationChange={setSaturation}
+        />
+      ) : (
+        <StyleLearning />
+      )}
     </main>
   )
 }

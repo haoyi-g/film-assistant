@@ -12,11 +12,55 @@ export type StyleProfile = {
   name: string
   match: number
   tags: string[]
-  lutPath: string
+  lutPath?: string
   adjustments: StyleAdjustments
 }
 
 export const styles: StyleProfile[] = [
+  {
+    id: 'original',
+    name: 'Original / No LUT',
+    match: 100,
+    tags: ['Original', 'Neutral', 'No LUT'],
+    adjustments: {
+      exposure: 0,
+      contrast: 0,
+      shadows: 0,
+      highlights: 0,
+      warmth: 0,
+      saturation: 0,
+    },
+  },
+  {
+    id: 'rgb-screen',
+    name: 'RGB Screen',
+    match: 100,
+    tags: ['Screen', 'Warm', 'Monochrome'],
+    lutPath: '/luts/rgb-screen.cube',
+    adjustments: {
+      exposure: 0,
+      contrast: 0,
+      shadows: 0,
+      highlights: 0,
+      warmth: 0,
+      saturation: 0,
+    },
+  },
+  {
+    id: 'infrared-magenta',
+    name: 'Infrared Magenta',
+    match: 100,
+    tags: ['Infrared', 'Magenta', 'Green foliage'],
+    lutPath: '/luts/infrared-magenta.cube',
+    adjustments: {
+      exposure: 0,
+      contrast: 0,
+      shadows: 0,
+      highlights: 0,
+      warmth: 0,
+      saturation: 0,
+    },
+  },
   {
     id: 'warm-golden-hour',
     name: 'Warm Golden Hour',
