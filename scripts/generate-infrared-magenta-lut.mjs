@@ -45,7 +45,7 @@ for (let blueIndex = 0; blueIndex < size; blueIndex += 1) {
         ? [
             clamp01(value * 1.2),
             clamp01(value * 0.15),
-            clamp01(value * 0.65),
+            clamp01(value * 0.45),
           ]
         : [red, green, blue]
 
