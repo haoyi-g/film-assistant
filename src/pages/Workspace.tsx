@@ -7,6 +7,7 @@ import { usePhotoAnalysis } from '../hooks/usePhotoAnalysis'
 import { exportImageFile } from '../utils/exportImageFile'
 import { renderImageAdjustments } from '../utils/renderImageAdjustments'
 import type {
+  ColorGradingAdjustments,
   HslAdjustments,
   HslColorKey,
 } from '../utils/renderImageAdjustments'
@@ -29,6 +30,7 @@ type WorkspaceProps = {
   warmth: number
   saturation: number
   hsl: HslAdjustments
+  colorGrading: ColorGradingAdjustments
   onImageChange: (event: ChangeEvent<HTMLInputElement>) => void
   onOpenDesktopImage?: () => void
   onTestDesktopEngine?: () => void
@@ -47,6 +49,15 @@ type WorkspaceProps = {
   onHslChange: (
     color: HslColorKey,
     channel: 'hue' | 'saturation' | 'luminance',
+    value: number,
+  ) => void
+  onColorGradingChange: (
+    zone: 'shadows' | 'midtones' | 'highlights',
+    channel: 'hue' | 'saturation' | 'luminance',
+    value: number,
+  ) => void
+  onColorGradingGlobalChange: (
+    channel: 'balance' | 'blending',
     value: number,
   ) => void
 
@@ -230,6 +241,7 @@ export function Workspace(props: WorkspaceProps) {
     warmth: props.warmth,
     saturation: props.saturation,
     hsl: props.hsl,
+    colorGrading: props.colorGrading,
   }
 
   const { adjustedUrl, isRendering, renderError } = useAdjustedImage(
@@ -735,6 +747,74 @@ export function Workspace(props: WorkspaceProps) {
                   This photo is nearly monochrome. No strong colour range was detected.
                 </div>
               )}
+            </div>
+          </section>
+
+          <section className="panel">
+            <div className="panel-head">
+              <h2>Color Grading</h2>
+              <span>Light zones</span>
+            </div>
+            <div className="panel-body color-grading">
+              {(['shadows', 'midtones', 'highlights'] as const).map((zone) => (
+                <details className="grading-zone" key={zone}>
+                  <summary>
+                    <span
+                      className="grading-swatch"
+                      style={{
+                        backgroundColor: `hsl(${props.colorGrading[zone].hue} 75% 55%)`,
+                      }}
+                    />
+                    <strong>{zone[0].toUpperCase() + zone.slice(1)}</strong>
+                  </summary>
+                  <ControlRow
+                    label={`${zone} Hue`}
+                    value={props.colorGrading[zone].hue}
+                    min={0}
+                    max={360}
+                    onChange={(value) =>
+                      props.onColorGradingChange(zone, 'hue', value)
+                    }
+                  />
+                  <ControlRow
+                    label={`${zone} Saturation`}
+                    value={props.colorGrading[zone].saturation}
+                    min={0}
+                    max={100}
+                    onChange={(value) =>
+                      props.onColorGradingChange(zone, 'saturation', value)
+                    }
+                  />
+                  <ControlRow
+                    label={`${zone} Luminance`}
+                    value={props.colorGrading[zone].luminance}
+                    min={-100}
+                    max={100}
+                    onChange={(value) =>
+                      props.onColorGradingChange(zone, 'luminance', value)
+                    }
+                  />
+                </details>
+              ))}
+
+              <ControlRow
+                label="Balance"
+                value={props.colorGrading.balance}
+                min={-100}
+                max={100}
+                onChange={(value) =>
+                  props.onColorGradingGlobalChange('balance', value)
+                }
+              />
+              <ControlRow
+                label="Blending"
+                value={props.colorGrading.blending}
+                min={0}
+                max={100}
+                onChange={(value) =>
+                  props.onColorGradingGlobalChange('blending', value)
+                }
+              />
             </div>
           </section>
 

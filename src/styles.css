@@ -98,6 +98,11 @@ textarea { width: 100%; min-height: 74px; resize: vertical; border: 1px solid #3
 .hsl-swatch.is-blue { --swatch: #3b82f6; }
 .hsl-swatch.is-purple { --swatch: #a855f7; }
 .hsl-swatch.is-magenta { --swatch: #ec4899; }
+.color-grading { display: grid; gap: 8px; }
+.grading-zone { border: 1px solid #343832; border-radius: 7px; padding: 0 10px; background: #191b18; }
+.grading-zone summary { display: flex; align-items: center; gap: 8px; padding: 9px 0; cursor: pointer; text-transform: capitalize; }
+.grading-zone[open] summary { margin-bottom: 9px; border-bottom: 1px solid #2b2e29; }
+.grading-swatch { width: 11px; height: 11px; flex: 0 0 auto; border-radius: 50%; box-shadow: 0 0 0 2px #ffffff18; }
 .control-row { margin-bottom: 12px; }
 .control-row label, .control-row > div { display: flex; justify-content: space-between; margin-bottom: 5px; color: #a8ab9f; font-size: 10px; }
 input[type='range'] { width: 100%; accent-color: #b7ce8d; }

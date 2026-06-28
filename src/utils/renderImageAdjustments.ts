@@ -27,6 +27,28 @@ export const createDefaultHslAdjustments = (): HslAdjustments =>
     ]),
   ) as HslAdjustments
 
+export type ColorGradingZone = {
+  hue: number
+  saturation: number
+  luminance: number
+}
+
+export type ColorGradingAdjustments = {
+  shadows: ColorGradingZone
+  midtones: ColorGradingZone
+  highlights: ColorGradingZone
+  balance: number
+  blending: number
+}
+
+export const createDefaultColorGrading = (): ColorGradingAdjustments => ({
+  shadows: { hue: 210, saturation: 0, luminance: 0 },
+  midtones: { hue: 30, saturation: 0, luminance: 0 },
+  highlights: { hue: 40, saturation: 0, luminance: 0 },
+  balance: 0,
+  blending: 50,
+})
+
 export type ImageAdjustments = {
   lutId?: string
   lutPath?: string
@@ -42,6 +64,7 @@ export type ImageAdjustments = {
   warmth: number
   saturation: number
   hsl: HslAdjustments
+  colorGrading: ColorGradingAdjustments
 }
 
 type RenderImageOptions = {
@@ -53,6 +76,11 @@ const DEFAULT_MAX_RENDER_SIZE = 1400
 
 const clamp01 = (value: number) => Math.min(1, Math.max(0, value))
 const normalizeSlider = (value: number) => clamp01(value / 100)
+
+function smoothstep(edge0: number, edge1: number, value: number) {
+  const amount = clamp01((value - edge0) / (edge1 - edge0))
+  return amount * amount * (3 - 2 * amount)
+}
 
 const normalizeSignedSlider = (value: number) =>
   Math.min(1, Math.max(-1, value / 100))
@@ -151,16 +179,87 @@ function applyHslMixer(
   if (!totalWeight || hsl.saturation < 0.01) return { red, green, blue }
 
   const colorPresence = clamp01(hsl.saturation * 5)
+  const shadowChromaProtection =
+    0.18 + 0.82 * smoothstep(0.025, 0.2, hsl.luminance)
+  const averageLuminanceChange = luminanceChange / totalWeight
+  const darkeningProtection =
+    averageLuminanceChange < 0
+      ? 0.1 + 0.9 * smoothstep(0.04, 0.28, hsl.luminance)
+      : 1
   const nextHue =
-    hsl.hue + (hueChange / totalWeight / 100) * (30 / 360) * colorPresence
+    hsl.hue +
+    (hueChange / totalWeight / 100) *
+      (30 / 360) *
+      colorPresence *
+      shadowChromaProtection
   const nextSaturation = clamp01(
-    hsl.saturation + (saturationChange / totalWeight / 100) * 0.5 * colorPresence,
+    hsl.saturation +
+      (saturationChange / totalWeight / 100) *
+        0.5 *
+        colorPresence *
+        shadowChromaProtection,
   )
   const nextLuminance = clamp01(
-    hsl.luminance + (luminanceChange / totalWeight / 100) * 0.35 * colorPresence,
+    hsl.luminance +
+      (averageLuminanceChange / 100) *
+        0.35 *
+        colorPresence *
+        darkeningProtection,
   )
 
   return hslToRgb(nextHue, nextSaturation, nextLuminance)
+}
+
+function applyColorGrading(
+  red: number,
+  green: number,
+  blue: number,
+  grading: ColorGradingAdjustments,
+) {
+  const luma = clamp01(0.2126 * red + 0.7152 * green + 0.0722 * blue)
+  const balancedLuma = clamp01(luma - (grading.balance / 100) * 0.2)
+  const width = 0.1 + (clamp01(grading.blending / 100) * 0.18)
+  const gaussian = (center: number) =>
+    Math.exp(-((balancedLuma - center) ** 2) / (2 * width ** 2))
+
+  const zones: Array<[
+    'shadows' | 'midtones' | 'highlights',
+    ColorGradingZone,
+    number,
+  ]> = [
+    ['shadows', grading.shadows, gaussian(0.15)],
+    ['midtones', grading.midtones, gaussian(0.5)],
+    ['highlights', grading.highlights, gaussian(0.85)],
+  ]
+
+  for (const [zoneName, zone, mask] of zones) {
+    if (zone.saturation !== 0) {
+      const tint = hslToRgb(zone.hue / 360, 1, 0.5)
+      const tintLuma =
+        0.2126 * tint.red + 0.7152 * tint.green + 0.0722 * tint.blue
+
+      // Deep shadows contain very little colour information. Strong chroma
+      // there reveals sensor noise and JPEG blocks, so gradually protect it.
+      const deepShadowProtection =
+        zoneName === 'shadows' ? 0.12 + 0.88 * smoothstep(0.025, 0.2, luma) : 1
+
+      // Keep low values precise while gently compressing extreme saturation.
+      const safeSaturation = Math.tanh((zone.saturation / 100) * 1.4) / 1.4
+      const strength = safeSaturation * mask * 0.38 * deepShadowProtection
+
+      // Add chroma around the tint's luminance to preserve image detail.
+      red += (tint.red - tintLuma) * strength
+      green += (tint.green - tintLuma) * strength
+      blue += (tint.blue - tintLuma) * strength
+    }
+
+    const luminanceChange = (zone.luminance / 100) * mask * 0.25
+    red += luminanceChange
+    green += luminanceChange
+    blue += luminanceChange
+  }
+
+  return { red, green, blue }
 }
 
 export async function renderImageAdjustments(
@@ -255,6 +354,16 @@ export async function renderImageAdjustments(
     red = hslColor.red
     green = hslColor.green
     blue = hslColor.blue
+
+    const gradedColor = applyColorGrading(
+      red,
+      green,
+      blue,
+      adjustments.colorGrading,
+    )
+    red = gradedColor.red
+    green = gradedColor.green
+    blue = gradedColor.blue
 
     if (cubeLut) {
       const beforeLutLuma = clamp01(

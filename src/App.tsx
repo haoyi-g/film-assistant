@@ -4,7 +4,9 @@ import { checkDesktopEngine, openLocalPhoto, runningInDesktop } from './native/d
 import { StyleLearning } from './pages/StyleLearning'
 import { Workspace } from './pages/Workspace'
 import {
+  createDefaultColorGrading,
   createDefaultHslAdjustments,
+  type ColorGradingAdjustments,
   type HslColorKey,
 } from './utils/renderImageAdjustments'
 
@@ -31,6 +33,7 @@ export function App() {
   const [warmth, setWarmth] = useState(0)
   const [saturation, setSaturation] = useState(0)
   const [hsl, setHsl] = useState(createDefaultHslAdjustments)
+  const [colorGrading, setColorGrading] = useState(createDefaultColorGrading)
 
   const desktop = runningInDesktop()
 
@@ -104,6 +107,7 @@ export function App() {
       setWarmth(0)
       setSaturation(0)
       setHsl(createDefaultHslAdjustments())
+      setColorGrading(createDefaultColorGrading())
       return
     }
 
@@ -125,6 +129,27 @@ export function App() {
     setHsl((current) => ({
       ...current,
       [color]: { ...current[color], [channel]: value },
+    }))
+  }
+
+  const handleColorGradingChange = (
+    zone: 'shadows' | 'midtones' | 'highlights',
+    channel: 'hue' | 'saturation' | 'luminance',
+    value: number,
+  ) => {
+    setColorGrading((current) => ({
+      ...current,
+      [zone]: { ...current[zone], [channel]: value },
+    }))
+  }
+
+  const handleColorGradingGlobalChange = (
+    channel: 'balance' | 'blending',
+    value: number,
+  ) => {
+    setColorGrading((current: ColorGradingAdjustments) => ({
+      ...current,
+      [channel]: value,
     }))
   }
 
@@ -182,6 +207,7 @@ export function App() {
           warmth={warmth}
           saturation={saturation}
           hsl={hsl}
+          colorGrading={colorGrading}
           onImageChange={handleBrowserImage}
           onOpenDesktopImage={desktop ? handleOpenDesktopImage : undefined}
           onTestDesktopEngine={handleDesktopHealthCheck}
@@ -198,6 +224,8 @@ export function App() {
           onWarmthChange={setWarmth}
           onSaturationChange={setSaturation}
           onHslChange={handleHslChange}
+          onColorGradingChange={handleColorGradingChange}
+          onColorGradingGlobalChange={handleColorGradingGlobalChange}
         />
       ) : (
         <StyleLearning />
