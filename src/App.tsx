@@ -3,6 +3,10 @@ import { styles, type StyleProfile } from './data/mockStyles'
 import { checkDesktopEngine, openLocalPhoto, runningInDesktop } from './native/desktop'
 import { StyleLearning } from './pages/StyleLearning'
 import { Workspace } from './pages/Workspace'
+import {
+  createDefaultHslAdjustments,
+  type HslColorKey,
+} from './utils/renderImageAdjustments'
 
 type AppView = 'workspace' | 'learning'
 
@@ -15,17 +19,18 @@ export function App() {
   const [desktopMessage, setDesktopMessage] = useState<string | null>(null)
   const [selectedStyle, setSelectedStyle] = useState<StyleProfile>(styles[0])
   const [selectedVersion, setSelectedVersion] = useState('B')
-  const [styleStrength, setStyleStrength] = useState(62)
-  const [shadowDensity, setShadowDensity] = useState(36)
-  const [colorDensity, setColorDensity] = useState(28)
-  const [grainStrength, setGrainStrength] = useState(18)
+  const [styleStrength, setStyleStrength] = useState(0)
+  const [shadowDensity, setShadowDensity] = useState(0)
+  const [colorDensity, setColorDensity] = useState(0)
+  const [grainStrength, setGrainStrength] = useState(0)
 
   const [exposure, setExposure] = useState(0)
-  const [contrast, setContrast] = useState(20)
-  const [shadows, setShadows] = useState(10)
-  const [highlights, setHighlights] = useState(-15)
-  const [warmth, setWarmth] = useState(8)
-  const [saturation, setSaturation] = useState(12)
+  const [contrast, setContrast] = useState(0)
+  const [shadows, setShadows] = useState(0)
+  const [highlights, setHighlights] = useState(0)
+  const [warmth, setWarmth] = useState(0)
+  const [saturation, setSaturation] = useState(0)
+  const [hsl, setHsl] = useState(createDefaultHslAdjustments)
 
   const desktop = runningInDesktop()
 
@@ -86,16 +91,41 @@ export function App() {
 
   const handleStyleChange = (style: StyleProfile) => {
     setSelectedStyle(style)
+
+    if (style.id === 'original') {
+      setStyleStrength(0)
+      setShadowDensity(0)
+      setColorDensity(0)
+      setGrainStrength(0)
+      setExposure(0)
+      setContrast(0)
+      setShadows(0)
+      setHighlights(0)
+      setWarmth(0)
+      setSaturation(0)
+      setHsl(createDefaultHslAdjustments())
+      return
+    }
+
     const fullStrengthStyles = ['rgb-screen', 'infrared-magenta']
-    setStyleStrength(
-      style.id === 'original' ? 0 : fullStrengthStyles.includes(style.id) ? 100 : 62,
-    )
+    setStyleStrength(fullStrengthStyles.includes(style.id) ? 100 : 62)
     setExposure(style.adjustments.exposure)
     setContrast(style.adjustments.contrast)
     setShadows(style.adjustments.shadows)
     setHighlights(style.adjustments.highlights)
     setWarmth(style.adjustments.warmth)
     setSaturation(style.adjustments.saturation)
+  }
+
+  const handleHslChange = (
+    color: HslColorKey,
+    channel: 'hue' | 'saturation' | 'luminance',
+    value: number,
+  ) => {
+    setHsl((current) => ({
+      ...current,
+      [color]: { ...current[color], [channel]: value },
+    }))
   }
 
   return (
@@ -151,6 +181,7 @@ export function App() {
           highlights={highlights}
           warmth={warmth}
           saturation={saturation}
+          hsl={hsl}
           onImageChange={handleBrowserImage}
           onOpenDesktopImage={desktop ? handleOpenDesktopImage : undefined}
           onTestDesktopEngine={handleDesktopHealthCheck}
@@ -166,6 +197,7 @@ export function App() {
           onHighlightsChange={setHighlights}
           onWarmthChange={setWarmth}
           onSaturationChange={setSaturation}
+          onHslChange={handleHslChange}
         />
       ) : (
         <StyleLearning />

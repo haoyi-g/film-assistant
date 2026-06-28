@@ -1,5 +1,32 @@
 import { applyCubeLut, loadCubeLut } from './cubeLut'
 
+export const HSL_COLOR_KEYS = [
+  'red',
+  'orange',
+  'yellow',
+  'green',
+  'aqua',
+  'blue',
+  'purple',
+  'magenta',
+] as const
+
+export type HslColorKey = (typeof HSL_COLOR_KEYS)[number]
+export type HslChannelAdjustment = {
+  hue: number
+  saturation: number
+  luminance: number
+}
+export type HslAdjustments = Record<HslColorKey, HslChannelAdjustment>
+
+export const createDefaultHslAdjustments = (): HslAdjustments =>
+  Object.fromEntries(
+    HSL_COLOR_KEYS.map((color) => [
+      color,
+      { hue: 0, saturation: 0, luminance: 0 },
+    ]),
+  ) as HslAdjustments
+
 export type ImageAdjustments = {
   lutId?: string
   lutPath?: string
@@ -14,6 +41,7 @@ export type ImageAdjustments = {
   highlights: number
   warmth: number
   saturation: number
+  hsl: HslAdjustments
 }
 
 type RenderImageOptions = {
@@ -42,6 +70,97 @@ function grainNoise(x: number, y: number): number {
   let seed = Math.imul(x + 1, 374761393) ^ Math.imul(y + 1, 668265263)
   seed = Math.imul(seed ^ (seed >>> 13), 1274126177)
   return ((seed >>> 0) / 4294967295) * 2 - 1
+}
+
+function rgbToHsl(red: number, green: number, blue: number) {
+  const maximum = Math.max(red, green, blue)
+  const minimum = Math.min(red, green, blue)
+  const difference = maximum - minimum
+  const luminance = (maximum + minimum) / 2
+  let hue = 0
+
+  if (difference !== 0) {
+    if (maximum === red) hue = ((green - blue) / difference) % 6
+    else if (maximum === green) hue = (blue - red) / difference + 2
+    else hue = (red - green) / difference + 4
+    hue /= 6
+    if (hue < 0) hue += 1
+  }
+
+  const saturation =
+    difference === 0 ? 0 : difference / (1 - Math.abs(2 * luminance - 1))
+  return { hue, saturation, luminance }
+}
+
+function hslToRgb(hue: number, saturation: number, luminance: number) {
+  const wrappedHue = ((hue % 1) + 1) % 1
+  const chroma = (1 - Math.abs(2 * luminance - 1)) * saturation
+  const section = wrappedHue * 6
+  const intermediate = chroma * (1 - Math.abs((section % 2) - 1))
+  let red = 0
+  let green = 0
+  let blue = 0
+
+  if (section < 1) [red, green] = [chroma, intermediate]
+  else if (section < 2) [red, green] = [intermediate, chroma]
+  else if (section < 3) [green, blue] = [chroma, intermediate]
+  else if (section < 4) [green, blue] = [intermediate, chroma]
+  else if (section < 5) [red, blue] = [intermediate, chroma]
+  else [red, blue] = [chroma, intermediate]
+
+  const match = luminance - chroma / 2
+  return { red: red + match, green: green + match, blue: blue + match }
+}
+
+const HSL_COLOR_CENTERS: Record<HslColorKey, number> = {
+  red: 0,
+  orange: 30,
+  yellow: 60,
+  green: 120,
+  aqua: 180,
+  blue: 240,
+  purple: 280,
+  magenta: 320,
+}
+
+function applyHslMixer(
+  red: number,
+  green: number,
+  blue: number,
+  adjustments: HslAdjustments,
+) {
+  const hsl = rgbToHsl(clamp01(red), clamp01(green), clamp01(blue))
+  const hueDegrees = hsl.hue * 360
+  let totalWeight = 0
+  let hueChange = 0
+  let saturationChange = 0
+  let luminanceChange = 0
+
+  for (const color of HSL_COLOR_KEYS) {
+    const rawDistance = Math.abs(hueDegrees - HSL_COLOR_CENTERS[color])
+    const distance = Math.min(rawDistance, 360 - rawDistance)
+    const weight = Math.max(0, 1 - distance / 50)
+    if (!weight) continue
+
+    totalWeight += weight
+    hueChange += adjustments[color].hue * weight
+    saturationChange += adjustments[color].saturation * weight
+    luminanceChange += adjustments[color].luminance * weight
+  }
+
+  if (!totalWeight || hsl.saturation < 0.01) return { red, green, blue }
+
+  const colorPresence = clamp01(hsl.saturation * 5)
+  const nextHue =
+    hsl.hue + (hueChange / totalWeight / 100) * (30 / 360) * colorPresence
+  const nextSaturation = clamp01(
+    hsl.saturation + (saturationChange / totalWeight / 100) * 0.5 * colorPresence,
+  )
+  const nextLuminance = clamp01(
+    hsl.luminance + (luminanceChange / totalWeight / 100) * 0.35 * colorPresence,
+  )
+
+  return hslToRgb(nextHue, nextSaturation, nextLuminance)
 }
 
 export async function renderImageAdjustments(
@@ -132,6 +251,11 @@ export async function renderImageAdjustments(
     green = luma + (green - luma) * saturationScale
     blue = luma + (blue - luma) * saturationScale
 
+    const hslColor = applyHslMixer(red, green, blue, adjustments.hsl)
+    red = hslColor.red
+    green = hslColor.green
+    blue = hslColor.blue
+
     if (cubeLut) {
       const beforeLutLuma = clamp01(
         0.2126 * red + 0.7152 * green + 0.0722 * blue,
@@ -143,7 +267,9 @@ export async function renderImageAdjustments(
       const shadowRisk = (1 - beforeLutLuma) ** 3
       const detailProtect = 1 - 0.45 * Math.max(highlightRisk, shadowRisk)
 
-      const lutStrength = 0.75 * detailProtect
+      // Style Strength controls only the LUT layer. Manual exposure, contrast,
+      // shadows and the other execution controls remain independent.
+      const lutStrength = mix * 0.75 * detailProtect
 
       red = red + (lutColor.red - red) * lutStrength
       green = green + (lutColor.green - green) * lutStrength
@@ -168,15 +294,9 @@ export async function renderImageAdjustments(
     green = clamp01(green + noise)
     blue = clamp01(blue + noise)
 
-    pixels[index] = Math.round(
-      255 * clamp01(originalRed + (red - originalRed) * mix),
-    )
-    pixels[index + 1] = Math.round(
-      255 * clamp01(originalGreen + (green - originalGreen) * mix),
-    )
-    pixels[index + 2] = Math.round(
-      255 * clamp01(originalBlue + (blue - originalBlue) * mix),
-    )
+    pixels[index] = Math.round(255 * clamp01(red))
+    pixels[index + 1] = Math.round(255 * clamp01(green))
+    pixels[index + 2] = Math.round(255 * clamp01(blue))
   }
 
   context.putImageData(imageData, 0, 0)

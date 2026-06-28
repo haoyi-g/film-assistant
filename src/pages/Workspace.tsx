@@ -6,6 +6,10 @@ import { useAdjustedImage } from '../hooks/useAdjustedImage'
 import { usePhotoAnalysis } from '../hooks/usePhotoAnalysis'
 import { exportImageFile } from '../utils/exportImageFile'
 import { renderImageAdjustments } from '../utils/renderImageAdjustments'
+import type {
+  HslAdjustments,
+  HslColorKey,
+} from '../utils/renderImageAdjustments'
 
 type WorkspaceProps = {
   fileName: string
@@ -24,6 +28,7 @@ type WorkspaceProps = {
   highlights: number
   warmth: number
   saturation: number
+  hsl: HslAdjustments
   onImageChange: (event: ChangeEvent<HTMLInputElement>) => void
   onOpenDesktopImage?: () => void
   onTestDesktopEngine?: () => void
@@ -39,6 +44,11 @@ type WorkspaceProps = {
   onHighlightsChange:(value:number) => void
   onWarmthChange:(value:number) => void
   onSaturationChange:(value:number) => void
+  onHslChange: (
+    color: HslColorKey,
+    channel: 'hue' | 'saturation' | 'luminance',
+    value: number,
+  ) => void
 
 }
 
@@ -219,6 +229,7 @@ export function Workspace(props: WorkspaceProps) {
     highlights: props.highlights,
     warmth: props.warmth,
     saturation: props.saturation,
+    hsl: props.hsl,
   }
 
   const { adjustedUrl, isRendering, renderError } = useAdjustedImage(
@@ -417,8 +428,24 @@ export function Workspace(props: WorkspaceProps) {
                 <button type="button">Reference LUT</button>
               </div>
 
+              <button
+                className={`style-card restore-original ${
+                  props.selectedStyle.id === 'original' ? 'is-active' : ''
+                }`}
+                type="button"
+                onClick={() => props.onStyleChange(styles[0])}
+              >
+                <div className="style-title">
+                  Restore Original
+                  <span>No LUT</span>
+                </div>
+                <div className="chips">
+                  <span className="chip">Reset all adjustments</span>
+                </div>
+              </button>
+
               <div className="style-list">
-                {styles.map((style) => (
+                {styles.filter((style) => style.id !== 'original').map((style) => (
                   <button
                     className={`style-card ${
                       style.id === props.selectedStyle.id ? 'is-active' : ''
@@ -599,33 +626,6 @@ export function Workspace(props: WorkspaceProps) {
 
           <section className="panel">
             <div className="panel-head">
-              <h2>Style Gap</h2>
-              <span>{props.selectedStyle.name}</span>
-            </div>
-            <div className="panel-body">
-              <ul className="delta-list">
-                <li>
-                  <span>Shadow density</span>
-                  <strong>+28</strong>
-                </li>
-                <li>
-                  <span>Contrast target</span>
-                  <strong>+22</strong>
-                </li>
-                <li>
-                  <span>Color density</span>
-                  <strong>+16</strong>
-                </li>
-                <li>
-                  <span>Grain texture</span>
-                  <strong>+12</strong>
-                </li>
-              </ul>
-            </div>
-          </section>
-
-          <section className="panel">
-            <div className="panel-head">
               <h2>Execution Control</h2>
               <span title={renderError ?? undefined}>{renderingStatus}</span>
             </div>
@@ -678,6 +678,63 @@ export function Workspace(props: WorkspaceProps) {
                 max={100}
                 onChange={props.onSaturationChange}
               />
+            </div>
+          </section>
+
+          <section className="panel">
+            <div className="panel-head">
+              <h2>HSL Color Mixer</h2>
+              <span>Selective colour</span>
+            </div>
+            <div className="panel-body hsl-mixer">
+              {!effectivePreviewUrl ? (
+                <div className="empty-state compact-empty">
+                  Upload a photo to detect editable colours.
+                </div>
+              ) : isAnalyzing ? (
+                <div className="empty-state compact-empty">
+                  Analysing colours…
+                </div>
+              ) : analysis?.editableColors.length ? (
+                analysis.editableColors.map(({ color, coverage }) => (
+                <details className="hsl-color-group" key={color}>
+                  <summary>
+                    <span className={`hsl-swatch is-${color}`} />
+                    <strong>{color[0].toUpperCase() + color.slice(1)}</strong>
+                    <small>{Math.round(coverage * 100)}%</small>
+                  </summary>
+                  <ControlRow
+                    label={`${color} Hue`}
+                    value={props.hsl[color].hue}
+                    min={-100}
+                    max={100}
+                    onChange={(value) => props.onHslChange(color, 'hue', value)}
+                  />
+                  <ControlRow
+                    label={`${color} Saturation`}
+                    value={props.hsl[color].saturation}
+                    min={-100}
+                    max={100}
+                    onChange={(value) =>
+                      props.onHslChange(color, 'saturation', value)
+                    }
+                  />
+                  <ControlRow
+                    label={`${color} Luminance`}
+                    value={props.hsl[color].luminance}
+                    min={-100}
+                    max={100}
+                    onChange={(value) =>
+                      props.onHslChange(color, 'luminance', value)
+                    }
+                  />
+                </details>
+                ))
+              ) : (
+                <div className="empty-state compact-empty">
+                  This photo is nearly monochrome. No strong colour range was detected.
+                </div>
+              )}
             </div>
           </section>
 

@@ -19,9 +19,9 @@ export type StyleProfile = {
 export const styles: StyleProfile[] = [
   {
     id: 'original',
-    name: 'Original / No LUT',
+    name: 'Original Photo',
     match: 100,
-    tags: ['Original', 'Neutral', 'No LUT'],
+    tags: ['Reset', 'No adjustments'],
     adjustments: {
       exposure: 0,
       contrast: 0,

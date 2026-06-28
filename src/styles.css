@@ -84,6 +84,20 @@ textarea { width: 100%; min-height: 74px; resize: vertical; border: 1px solid #3
 .export-history-title strong { color: #9fa695; font-size: 9px; font-weight: 500; }
 .export-history-meta { margin-top: 5px; color: #858a7e; font-size: 9px; line-height: 1.45; }
 .compact-empty { min-height: auto; padding: 8px 0; text-align: left; line-height: 1.5; }
+.hsl-mixer { display: grid; gap: 8px; }
+.hsl-color-group { border: 1px solid #343832; border-radius: 7px; padding: 0 10px; background: #191b18; }
+.hsl-color-group summary { display: flex; align-items: center; gap: 8px; padding: 9px 0; cursor: pointer; text-transform: capitalize; }
+.hsl-color-group summary small { margin-left: auto; color: #858a7e; font-size: 9px; }
+.hsl-color-group[open] summary { margin-bottom: 9px; border-bottom: 1px solid #2b2e29; }
+.hsl-swatch { width: 11px; height: 11px; flex: 0 0 auto; border-radius: 50%; background: var(--swatch); box-shadow: 0 0 0 2px #ffffff18; }
+.hsl-swatch.is-red { --swatch: #ef4444; }
+.hsl-swatch.is-orange { --swatch: #f97316; }
+.hsl-swatch.is-yellow { --swatch: #eab308; }
+.hsl-swatch.is-green { --swatch: #22c55e; }
+.hsl-swatch.is-aqua { --swatch: #14b8a6; }
+.hsl-swatch.is-blue { --swatch: #3b82f6; }
+.hsl-swatch.is-purple { --swatch: #a855f7; }
+.hsl-swatch.is-magenta { --swatch: #ec4899; }
 .control-row { margin-bottom: 12px; }
 .control-row label, .control-row > div { display: flex; justify-content: space-between; margin-bottom: 5px; color: #a8ab9f; font-size: 10px; }
 input[type='range'] { width: 100%; accent-color: #b7ce8d; }

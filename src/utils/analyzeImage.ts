@@ -1,10 +1,18 @@
+import type { HslColorKey } from './renderImageAdjustments'
+
 export type AnalysisLevel = 'Low' | 'Normal' | 'High'
+
+export type EditableColor = {
+  color: HslColorKey
+  coverage: number
+}
 
 export type PhotoAnalysis = {
   exposure: AnalysisLevel
   contrast: AnalysisLevel
   saturation: AnalysisLevel
   shadows: 'Crushed' | 'Soft' | 'Normal' | 'Deep'
+  editableColors: EditableColor[]
   metrics: {
     brightness: number
     contrast: number
@@ -18,6 +26,33 @@ export type PhotoAnalysis = {
 }
 
 const MAX_ANALYSIS_SIZE = 900
+
+function hueToColor(hue: number): HslColorKey {
+  const degrees = hue * 360
+  if (degrees < 15 || degrees >= 340) return 'red'
+  if (degrees < 45) return 'orange'
+  if (degrees < 90) return 'yellow'
+  if (degrees < 150) return 'green'
+  if (degrees < 210) return 'aqua'
+  if (degrees < 260) return 'blue'
+  if (degrees < 300) return 'purple'
+  return 'magenta'
+}
+
+function rgbToHue(red: number, green: number, blue: number) {
+  const maximum = Math.max(red, green, blue)
+  const minimum = Math.min(red, green, blue)
+  const difference = maximum - minimum
+  if (difference === 0) return 0
+
+  let hue = 0
+  if (maximum === red) hue = ((green - blue) / difference) % 6
+  else if (maximum === green) hue = (blue - red) / difference + 2
+  else hue = (red - green) / difference + 4
+
+  hue /= 6
+  return hue < 0 ? hue + 1 : hue
+}
 
 function percentile(sortedValues: number[], ratio: number): number {
   if (sortedValues.length === 0) return 0
@@ -82,6 +117,17 @@ export async function analyzeImage(source: File | string): Promise<PhotoAnalysis
   let saturationTotal = 0
   let shadowCount = 0
   let highlightCount = 0
+  let chromaticPixelCount = 0
+  const colorCounts: Record<HslColorKey, number> = {
+    red: 0,
+    orange: 0,
+    yellow: 0,
+    green: 0,
+    aqua: 0,
+    blue: 0,
+    purple: 0,
+    magenta: 0,
+  }
 
   for (let index = 0; index < pixels.length; index += 4) {
     const red = pixels[index] / 255
@@ -96,6 +142,12 @@ export async function analyzeImage(source: File | string): Promise<PhotoAnalysis
     saturationTotal += saturation
     if (luma < 45 / 255) shadowCount += 1
     if (luma > 220 / 255) highlightCount += 1
+
+    // Near-grey and nearly black pixels have no useful hue for selective HSL.
+    if (saturation > 0.08 && maxChannel > 0.04) {
+      colorCounts[hueToColor(rgbToHue(red, green, blue))] += 1
+      chromaticPixelCount += 1
+    }
   }
 
   luminances.sort((a, b) => a - b)
@@ -129,12 +181,22 @@ export async function analyzeImage(source: File | string): Promise<PhotoAnalysis
           : 'Normal'
 
   const round = (value: number) => Number(value.toFixed(4))
+  const editableColors = (Object.entries(colorCounts) as [HslColorKey, number][])
+    .map(([color, count]) => ({
+      color,
+      coverage: chromaticPixelCount ? count / chromaticPixelCount : 0,
+    }))
+    .filter(({ coverage }) => coverage >= 0.02)
+    .sort((a, b) => b.coverage - a.coverage)
+    .slice(0, 6)
+    .map(({ color, coverage }) => ({ color, coverage: round(coverage) }))
 
   return {
     exposure,
     contrast,
     saturation,
     shadows,
+    editableColors,
     metrics: {
       brightness: round(brightness),
       contrast: round(contrastValue),
