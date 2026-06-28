@@ -25,8 +25,10 @@ button { color: inherit; cursor: pointer; }
 .engine-test:hover { border-color: #71805c; background: #252a21; }
 .error-banner { max-width: 1720px; margin: 0 auto 14px; padding: 11px 14px; border: 1px solid #7d473f; border-radius: 8px; color: #ffc0b3; background: #351d1a; }
 .info-banner { max-width: 1720px; margin: 0 auto 14px; padding: 11px 14px; border: 1px solid #4b6640; border-radius: 8px; color: #dcefc4; background: #1d2c1a; font-size: 12px; overflow-wrap: anywhere; }
-.workspace { display: grid; grid-template-columns: 292px minmax(480px, 1fr) 292px; gap: 14px; max-width: 1720px; margin: auto; }
+.workspace { display: grid; grid-template-columns: 292px minmax(480px, 1fr) 292px; align-items: start; gap: 14px; max-width: 1720px; margin: auto; }
 .column { display: flex; flex-direction: column; gap: 14px; }
+.color-tools-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 14px; }
+.right-column > .panel:nth-child(3), .right-column > .panel:nth-child(4) { display: none; }
 .panel { overflow: hidden; border: 1px solid #30332e; border-radius: 10px; background: #191b18e8; box-shadow: 0 14px 45px #0003; }
 .panel-head { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 12px 14px; border-bottom: 1px solid #2c2f2a; }
 .panel-head h2 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .03em; }
@@ -114,3 +116,4 @@ input[type='range'] { width: 100%; accent-color: #b7ce8d; }
 .version-card.is-active { border-color: #829469; background: #292e24; }
 .footer-actions { display: flex; gap: 8px; }
 @media (max-width: 1200px) { .workspace { grid-template-columns: 250px minmax(430px,1fr) 250px; } }
+@media (max-width: 900px) { .color-tools-row { grid-template-columns: 1fr; } }

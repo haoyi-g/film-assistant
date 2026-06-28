@@ -497,6 +497,7 @@ export function Workspace(props: WorkspaceProps) {
           </section>
         </aside>
 
+        <div className="column center-column">
         <section className="panel preview-shell">
           <div className="preview-toolbar">
             <div className="segmented">
@@ -609,6 +610,132 @@ export function Workspace(props: WorkspaceProps) {
           </div>
         </section>
 
+        <div className="color-tools-row">
+        <section className="panel">
+          <div className="panel-head">
+            <h2>HSL Color Mixer</h2>
+            <span>Selective colour</span>
+          </div>
+          <div className="panel-body hsl-mixer">
+            {!effectivePreviewUrl ? (
+              <div className="empty-state compact-empty">
+                Upload a photo to detect editable colours.
+              </div>
+            ) : isAnalyzing ? (
+              <div className="empty-state compact-empty">Analysing colours…</div>
+            ) : analysis?.editableColors.length ? (
+              analysis.editableColors.map(({ color, coverage }) => (
+                <details className="hsl-color-group" key={color}>
+                  <summary>
+                    <span className={`hsl-swatch is-${color}`} />
+                    <strong>{color[0].toUpperCase() + color.slice(1)}</strong>
+                    <small>{Math.round(coverage * 100)}%</small>
+                  </summary>
+                  <ControlRow
+                    label={`${color} Hue`}
+                    value={props.hsl[color].hue}
+                    min={-100}
+                    max={100}
+                    onChange={(value) => props.onHslChange(color, 'hue', value)}
+                  />
+                  <ControlRow
+                    label={`${color} Saturation`}
+                    value={props.hsl[color].saturation}
+                    min={-100}
+                    max={100}
+                    onChange={(value) =>
+                      props.onHslChange(color, 'saturation', value)
+                    }
+                  />
+                  <ControlRow
+                    label={`${color} Luminance`}
+                    value={props.hsl[color].luminance}
+                    min={-100}
+                    max={100}
+                    onChange={(value) =>
+                      props.onHslChange(color, 'luminance', value)
+                    }
+                  />
+                </details>
+              ))
+            ) : (
+              <div className="empty-state compact-empty">
+                This photo is nearly monochrome. No strong colour range was detected.
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Color Grading</h2>
+            <span>Light zones</span>
+          </div>
+          <div className="panel-body color-grading">
+            {(['shadows', 'midtones', 'highlights'] as const).map((zone) => (
+              <details className="grading-zone" key={zone}>
+                <summary>
+                  <span
+                    className="grading-swatch"
+                    style={{
+                      backgroundColor: `hsl(${props.colorGrading[zone].hue} 75% 55%)`,
+                    }}
+                  />
+                  <strong>{zone[0].toUpperCase() + zone.slice(1)}</strong>
+                </summary>
+                <ControlRow
+                  label={`${zone} Hue`}
+                  value={props.colorGrading[zone].hue}
+                  min={0}
+                  max={360}
+                  onChange={(value) =>
+                    props.onColorGradingChange(zone, 'hue', value)
+                  }
+                />
+                <ControlRow
+                  label={`${zone} Saturation`}
+                  value={props.colorGrading[zone].saturation}
+                  min={0}
+                  max={100}
+                  onChange={(value) =>
+                    props.onColorGradingChange(zone, 'saturation', value)
+                  }
+                />
+                <ControlRow
+                  label={`${zone} Luminance`}
+                  value={props.colorGrading[zone].luminance}
+                  min={-100}
+                  max={100}
+                  onChange={(value) =>
+                    props.onColorGradingChange(zone, 'luminance', value)
+                  }
+                />
+              </details>
+            ))}
+
+            <ControlRow
+              label="Balance"
+              value={props.colorGrading.balance}
+              min={-100}
+              max={100}
+              onChange={(value) =>
+                props.onColorGradingGlobalChange('balance', value)
+              }
+            />
+            <ControlRow
+              label="Blending"
+              value={props.colorGrading.blending}
+              min={0}
+              max={100}
+              onChange={(value) =>
+                props.onColorGradingGlobalChange('blending', value)
+              }
+            />
+          </div>
+        </section>
+        </div>
+        </div>
+
         <aside className="column right-column">
           <section className="panel">
             <div className="panel-head">
@@ -643,6 +770,14 @@ export function Workspace(props: WorkspaceProps) {
             </div>
 
             <div className="panel-body">
+              <ControlRow
+                label="LUT Strength"
+                value={props.styleStrength}
+                min={0}
+                max={100}
+                onChange={props.onStyleStrengthChange}
+              />
+
              <ControlRow
                 label="Exposure"
                 value={props.exposure}
