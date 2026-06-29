@@ -127,9 +127,9 @@ export function StyleLearning() {
                 <div className="thumb placeholder-thumb" />
               )}
               <div>
-                <strong>{originalImage?.name ?? 'No original selected'}</strong>
+                <strong>{originalImage?.name ?? t('No original selected')}</strong>
                 <br />
-                <span>Source image before editing</span>
+                <span>{t('Source image before editing')}</span>
               </div>
             </div>
 
@@ -157,9 +157,9 @@ export function StyleLearning() {
                 <div className="thumb placeholder-thumb" />
               )}
               <div>
-                <strong>{editedImage?.name ?? 'No edited photo selected'}</strong>
+                <strong>{editedImage?.name ?? t('No edited photo selected')}</strong>
                 <br />
-                <span>Target image after editing</span>
+                <span>{t('Target image after editing')}</span>
               </div>
             </div>
           </div>
@@ -168,7 +168,7 @@ export function StyleLearning() {
         <section className="panel">
           <div className="panel-head">
             <h2>{t('Learn As')}</h2>
-            <span>{outputMode === 'lut' ? '.cube' : 'Recipe'}</span>
+            <span>{outputMode === 'lut' ? '.cube' : t('Recipe')}</span>
           </div>
 
           <div className="panel-body">
@@ -179,13 +179,13 @@ export function StyleLearning() {
                 onClick={() => setOutputMode('lut')}
               >
                 <div className="style-title">
-                  Generate LUT
+                  {t('Generate LUT')}
                   <span>.cube</span>
                 </div>
                 <div className="chips">
-                  <span className="chip">Color map</span>
-                  <span className="chip">Reusable</span>
-                  <span className="chip">Exportable</span>
+                    <span className="chip">{t('Color map')}</span>
+                    <span className="chip">{t('Reusable')}</span>
+                    <span className="chip">{t('Exportable')}</span>
                 </div>
               </button>
 
@@ -195,13 +195,13 @@ export function StyleLearning() {
                 onClick={() => setOutputMode('recipe')}
               >
                 <div className="style-title">
-                  Save Slider Style
-                  <span>Params</span>
+                  {t('Save Slider Style')}
+                  <span>{t('Params')}</span>
                 </div>
                 <div className="chips">
-                  <span className="chip">Exposure</span>
-                  <span className="chip">Contrast</span>
-                  <span className="chip">Warmth</span>
+                  <span className="chip">{t('Exposure')}</span>
+                  <span className="chip">{t('Contrast')}</span>
+                  <span className="chip">{t('Warmth')}</span>
                 </div>
               </button>
             </div>
@@ -221,7 +221,7 @@ export function StyleLearning() {
               onChange={(event) => setStyleName(event.target.value)}
             />
             <textarea
-              defaultValue="Learn the difference between the original and edited photo, then turn that difference into a reusable look."
+              defaultValue={t('Learn the difference between the original and edited photo, then turn that difference into a reusable look.')}
               spellCheck={false}
             />
           </div>
@@ -313,7 +313,7 @@ export function StyleLearning() {
             />
           ) : (
             <div className="empty-state">
-              Upload an original photo and its edited version to learn the style.
+              {t('Upload an original photo and its edited version to learn the style.')}
             </div>
           )}
         </div>
@@ -328,20 +328,20 @@ export function StyleLearning() {
 
           <div className="panel-body metric-grid">
             <div className="metric">
-              <span>Output</span>
-              <strong>{outputMode === 'lut' ? 'LUT' : 'Style'}</strong>
+              <span>{t('Output')}</span>
+              <strong>{outputMode === 'lut' ? 'LUT' : t('Style')}</strong>
             </div>
             <div className="metric">
-              <span>Pair Status</span>
-              <strong>{canLearn ? 'Ready' : 'Missing'}</strong>
+              <span>{t('Pair Status')}</span>
+              <strong>{canLearn ? t('Ready') : t('Missing')}</strong>
             </div>
             <div className="metric">
-              <span>Alignment</span>
-              <strong>{canLearn ? 'Manual' : '—'}</strong>
+              <span>{t('Alignment')}</span>
+              <strong>{canLearn ? t('Manual') : '—'}</strong>
             </div>
             <div className="metric">
-              <span>Strength</span>
-              <strong>{canLearn ? 'Adaptive' : '—'}</strong>
+              <span>{t('Strength')}</span>
+              <strong>{canLearn ? t('Adaptive') : '—'}</strong>
             </div>
           </div>
         </section>
@@ -356,10 +356,10 @@ export function StyleLearning() {
             <ul className="param-list learning-vector-list">
               {learningSignals.map((item) => (
                 <li key={item.label}>
-                  <span>{item.label}</span>
-                  <strong>{canLearn ? item.value : '—'}</strong>
+                  <span>{t(item.label)}</span>
+                  <strong>{canLearn ? t(item.value) : '—'}</strong>
                   <small>
-                    {canLearn ? item.description : 'Upload both images first'}
+                    {canLearn ? t(item.description) : t('Upload both images first')}
                   </small>
                 </li>
               ))}
@@ -376,15 +376,15 @@ export function StyleLearning() {
           <div className="panel-body">
             <label className="check-row">
               <input type="checkbox" defaultChecked />
-              <span>Keep skin tones natural when learning color shifts.</span>
+              <span>{t('Keep skin tones natural when learning color shifts.')}</span>
             </label>
             <label className="check-row">
               <input type="checkbox" defaultChecked />
-              <span>Protect highlight detail from aggressive LUT curves.</span>
+              <span>{t('Protect highlight detail from aggressive LUT curves.')}</span>
             </label>
             <label className="check-row">
               <input type="checkbox" defaultChecked />
-              <span>Limit shadow clipping when creating the learned style.</span>
+              <span>{t('Limit shadow clipping when creating the learned style.')}</span>
             </label>
           </div>
         </section>

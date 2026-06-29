@@ -681,14 +681,14 @@ export function Workspace(props: WorkspaceProps) {
                   <br />
                   <span>
                     {isReadingRaw
-                      ? 'Extracting embedded RAW preview...'
+                      ? t('Extracting embedded RAW preview...')
                       : rawError
                         ? rawError
                         : isAnalyzing
-                          ? 'Analyzing photo...'
+                          ? t('Analyzing photo...')
                           : effectivePreviewUrl
-                            ? 'Ready for analysis'
-                            : 'Choose a photo'}
+                            ? t('Ready for analysis')
+                            : t('Choose a photo')}
                   </span>
                 </div>
               </div>
@@ -722,7 +722,7 @@ export function Workspace(props: WorkspaceProps) {
                   <span>{t('No LUT')}</span>
                 </div>
                 <div className="chips">
-                  <span className="chip">Reset all adjustments</span>
+                <span className="chip">{t('Reset all adjustments')}</span>
                 </div>
               </button>
 
@@ -755,8 +755,8 @@ export function Workspace(props: WorkspaceProps) {
 
           <section className="panel">
             <div className="panel-head">
-              <h2>Language Intent</h2>
-              <span>Optional</span>
+              <h2>{t('Language Intent')}</h2>
+              <span>{t('Optional')}</span>
             </div>
             <div className="panel-body">
               <textarea
@@ -947,27 +947,27 @@ export function Workspace(props: WorkspaceProps) {
           <div className="panel-body hsl-mixer">
             {!effectivePreviewUrl ? (
               <div className="empty-state compact-empty">
-                Upload a photo to detect editable colours.
+                {t('Upload a photo to detect editable colours.')}
               </div>
             ) : isAnalyzing ? (
-              <div className="empty-state compact-empty">Analysing colours…</div>
+              <div className="empty-state compact-empty">{t('Analysing colours…')}</div>
             ) : analysis?.editableColors.length ? (
               analysis.editableColors.map(({ color, coverage }) => (
                 <details className="hsl-color-group" key={color}>
                   <summary>
                     <span className={`hsl-swatch is-${color}`} />
-                    <strong>{color[0].toUpperCase() + color.slice(1)}</strong>
+                    <strong>{t(color[0].toUpperCase() + color.slice(1))}</strong>
                     <small>{Math.round(coverage * 100)}%</small>
                   </summary>
                   <ControlRow
-                    label={`${color} Hue`}
+                    label={`${t(color[0].toUpperCase() + color.slice(1))} ${t('Hue')}`}
                     value={props.hsl[color].hue}
                     min={-100}
                     max={100}
                     onChange={(value) => props.onHslChange(color, 'hue', value)}
                   />
                   <ControlRow
-                    label={`${color} Saturation`}
+                    label={`${t(color[0].toUpperCase() + color.slice(1))} ${t('Saturation')}`}
                     value={props.hsl[color].saturation}
                     min={-100}
                     max={100}
@@ -976,7 +976,7 @@ export function Workspace(props: WorkspaceProps) {
                     }
                   />
                   <ControlRow
-                    label={`${color} Luminance`}
+                    label={`${t(color[0].toUpperCase() + color.slice(1))} ${t('Luminance')}`}
                     value={props.hsl[color].luminance}
                     min={-100}
                     max={100}
@@ -988,7 +988,7 @@ export function Workspace(props: WorkspaceProps) {
               ))
             ) : (
               <div className="empty-state compact-empty">
-                This photo is nearly monochrome. No strong colour range was detected.
+                {t('This photo is nearly monochrome. No strong colour range was detected.')}
               </div>
             )}
           </div>
@@ -1009,10 +1009,10 @@ export function Workspace(props: WorkspaceProps) {
                       backgroundColor: `hsl(${props.colorGrading[zone].hue} 75% 55%)`,
                     }}
                   />
-                  <strong>{zone[0].toUpperCase() + zone.slice(1)}</strong>
+                  <strong>{t(zone[0].toUpperCase() + zone.slice(1))}</strong>
                 </summary>
                 <ControlRow
-                  label={`${zone} Hue`}
+                  label={`${t(zone[0].toUpperCase() + zone.slice(1))} ${t('Hue')}`}
                   value={props.colorGrading[zone].hue}
                   min={0}
                   max={360}
@@ -1021,7 +1021,7 @@ export function Workspace(props: WorkspaceProps) {
                   }
                 />
                 <ControlRow
-                  label={`${zone} Saturation`}
+                  label={`${t(zone[0].toUpperCase() + zone.slice(1))} ${t('Saturation')}`}
                   value={props.colorGrading[zone].saturation}
                   min={0}
                   max={100}
@@ -1030,7 +1030,7 @@ export function Workspace(props: WorkspaceProps) {
                   }
                 />
                 <ControlRow
-                  label={`${zone} Luminance`}
+                  label={`${t(zone[0].toUpperCase() + zone.slice(1))} ${t('Luminance')}`}
                   value={props.colorGrading[zone].luminance}
                   min={-100}
                   max={100}
@@ -1042,7 +1042,7 @@ export function Workspace(props: WorkspaceProps) {
             ))}
 
             <ControlRow
-              label="Balance"
+              label={t('Balance')}
               value={props.colorGrading.balance}
               min={-100}
               max={100}
@@ -1051,7 +1051,7 @@ export function Workspace(props: WorkspaceProps) {
               }
             />
             <ControlRow
-              label="Blending"
+              label={t('Blending')}
               value={props.colorGrading.blending}
               min={0}
               max={100}
@@ -1121,7 +1121,7 @@ export function Workspace(props: WorkspaceProps) {
                 (key) => (
                   <ControlRow
                     key={key}
-                    label={`Local ${key[0].toUpperCase() + key.slice(1)}`}
+                    label={t(`Local ${key[0].toUpperCase() + key.slice(1)}`)}
                     value={activeMask.adjustments[key]}
                     min={-100}
                     max={100}
@@ -1138,24 +1138,24 @@ export function Workspace(props: WorkspaceProps) {
           <section className="panel">
             <div className="panel-head">
               <h2>{t('Current Analysis')}</h2>
-              <span title={analysisError ?? undefined}>{analysisStatus}</span>
+              <span title={analysisError ?? undefined}>{t(analysisStatus)}</span>
             </div>
 
             <div className="panel-body metric-grid">
               <div className="metric">
-                <span>Exposure</span>
+                <span>{t('Exposure')}</span>
                 <strong>{analysis?.exposure ?? '—'}</strong>
               </div>
               <div className="metric">
-                <span>Contrast</span>
+                <span>{t('Contrast')}</span>
                 <strong>{analysis?.contrast ?? '—'}</strong>
               </div>
               <div className="metric">
-                <span>Saturation</span>
+                <span>{t('Saturation')}</span>
                 <strong>{analysis?.saturation ?? '—'}</strong>
               </div>
               <div className="metric">
-                <span>Shadows</span>
+                <span>{t('Shadows')}</span>
                 <strong>{analysis?.shadows ?? '—'}</strong>
               </div>
             </div>
@@ -1163,13 +1163,13 @@ export function Workspace(props: WorkspaceProps) {
 
           <section className="panel">
             <div className="panel-head">
-              <h2>Execution Control</h2>
-              <span title={renderError ?? undefined}>{renderingStatus}</span>
+              <h2>{t('Execution Control')}</h2>
+              <span title={renderError ?? undefined}>{t(renderingStatus)}</span>
             </div>
 
             <div className="panel-body">
               <ControlRow
-                label="LUT Strength"
+                label={t('LUT Strength')}
                 value={props.styleStrength}
                 min={0}
                 max={100}
@@ -1177,7 +1177,7 @@ export function Workspace(props: WorkspaceProps) {
               />
 
              <ControlRow
-                label="Exposure"
+                label={t('Exposure')}
                 value={props.exposure}
                 min={-100}
                 max={100}
@@ -1185,7 +1185,7 @@ export function Workspace(props: WorkspaceProps) {
               />
 
               <ControlRow
-                label="Contrast"
+                label={t('Contrast')}
                 value={props.contrast}
                 min={-100}
                 max={100}
@@ -1193,7 +1193,7 @@ export function Workspace(props: WorkspaceProps) {
               />
 
               <ControlRow
-                label="Shadows"
+                label={t('Shadows')}
                 value={props.shadows}
                 min={-100}
                 max={100}
@@ -1201,7 +1201,7 @@ export function Workspace(props: WorkspaceProps) {
               />
 
               <ControlRow
-                label="Highlights"
+                label={t('Highlights')}
                 value={props.highlights}
                 min={-100}
                 max={100}
@@ -1209,7 +1209,7 @@ export function Workspace(props: WorkspaceProps) {
               />
 
               <ControlRow
-                label="Warmth"
+                label={t('Warmth')}
                 value={props.warmth}
                 min={-100}
                 max={100}
@@ -1217,7 +1217,7 @@ export function Workspace(props: WorkspaceProps) {
               />
 
               <ControlRow
-                label="Saturation"
+                label={t('Saturation')}
                 value={props.saturation}
                 min={-100}
                 max={100}
@@ -1227,11 +1227,11 @@ export function Workspace(props: WorkspaceProps) {
               {personCutoutEnabled && (
                 <div className="skin-tone-controls">
                   <div className="control-section-title">
-                    <strong>Skin Tone</strong>
-                    <span>Skin only</span>
+                    <strong>{t('Skin Tone')}</strong>
+                    <span>{t('Skin only')}</span>
                   </div>
                   <ControlRow
-                    label="Skin Warmth"
+                    label={t('Skin Warmth')}
                     value={skinTone.warmth}
                     min={-100}
                     max={100}
@@ -1240,7 +1240,7 @@ export function Workspace(props: WorkspaceProps) {
                     }
                   />
                   <ControlRow
-                    label="Skin Tint"
+                    label={t('Skin Tint')}
                     value={skinTone.tint}
                     min={-100}
                     max={100}
@@ -1249,7 +1249,7 @@ export function Workspace(props: WorkspaceProps) {
                     }
                   />
                   <ControlRow
-                    label="Skin Saturation"
+                    label={t('Skin Saturation')}
                     value={skinTone.saturation}
                     min={-100}
                     max={100}
@@ -1258,7 +1258,7 @@ export function Workspace(props: WorkspaceProps) {
                     }
                   />
                   <ControlRow
-                    label="Skin Luminance"
+                    label={t('Skin Luminance')}
                     value={skinTone.luminance}
                     min={-100}
                     max={100}
@@ -1273,35 +1273,35 @@ export function Workspace(props: WorkspaceProps) {
 
           <section className="panel">
             <div className="panel-head">
-              <h2>HSL Color Mixer</h2>
-              <span>Selective colour</span>
+              <h2>{t('HSL Color Mixer')}</h2>
+              <span>{t('Selective colour')}</span>
             </div>
             <div className="panel-body hsl-mixer">
               {!effectivePreviewUrl ? (
                 <div className="empty-state compact-empty">
-                  Upload a photo to detect editable colours.
+                  {t('Upload a photo to detect editable colours.')}
                 </div>
               ) : isAnalyzing ? (
                 <div className="empty-state compact-empty">
-                  Analysing colours…
+                  {t('Analysing colours…')}
                 </div>
               ) : analysis?.editableColors.length ? (
                 analysis.editableColors.map(({ color, coverage }) => (
                 <details className="hsl-color-group" key={color}>
                   <summary>
                     <span className={`hsl-swatch is-${color}`} />
-                    <strong>{color[0].toUpperCase() + color.slice(1)}</strong>
+                    <strong>{t(color[0].toUpperCase() + color.slice(1))}</strong>
                     <small>{Math.round(coverage * 100)}%</small>
                   </summary>
                   <ControlRow
-                    label={`${color} Hue`}
+                    label={`${t(color[0].toUpperCase() + color.slice(1))} ${t('Hue')}`}
                     value={props.hsl[color].hue}
                     min={-100}
                     max={100}
                     onChange={(value) => props.onHslChange(color, 'hue', value)}
                   />
                   <ControlRow
-                    label={`${color} Saturation`}
+                    label={`${t(color[0].toUpperCase() + color.slice(1))} ${t('Saturation')}`}
                     value={props.hsl[color].saturation}
                     min={-100}
                     max={100}
@@ -1310,7 +1310,7 @@ export function Workspace(props: WorkspaceProps) {
                     }
                   />
                   <ControlRow
-                    label={`${color} Luminance`}
+                    label={`${t(color[0].toUpperCase() + color.slice(1))} ${t('Luminance')}`}
                     value={props.hsl[color].luminance}
                     min={-100}
                     max={100}
@@ -1322,7 +1322,7 @@ export function Workspace(props: WorkspaceProps) {
                 ))
               ) : (
                 <div className="empty-state compact-empty">
-                  This photo is nearly monochrome. No strong colour range was detected.
+                  {t('This photo is nearly monochrome. No strong colour range was detected.')}
                 </div>
               )}
             </div>
@@ -1330,8 +1330,8 @@ export function Workspace(props: WorkspaceProps) {
 
           <section className="panel">
             <div className="panel-head">
-              <h2>Color Grading</h2>
-              <span>Light zones</span>
+              <h2>{t('Color Grading')}</h2>
+              <span>{t('Light zones')}</span>
             </div>
             <div className="panel-body color-grading">
               {(['shadows', 'midtones', 'highlights'] as const).map((zone) => (
@@ -1343,10 +1343,10 @@ export function Workspace(props: WorkspaceProps) {
                         backgroundColor: `hsl(${props.colorGrading[zone].hue} 75% 55%)`,
                       }}
                     />
-                    <strong>{zone[0].toUpperCase() + zone.slice(1)}</strong>
+                    <strong>{t(zone[0].toUpperCase() + zone.slice(1))}</strong>
                   </summary>
                   <ControlRow
-                    label={`${zone} Hue`}
+                    label={`${t(zone[0].toUpperCase() + zone.slice(1))} ${t('Hue')}`}
                     value={props.colorGrading[zone].hue}
                     min={0}
                     max={360}
@@ -1355,7 +1355,7 @@ export function Workspace(props: WorkspaceProps) {
                     }
                   />
                   <ControlRow
-                    label={`${zone} Saturation`}
+                    label={`${t(zone[0].toUpperCase() + zone.slice(1))} ${t('Saturation')}`}
                     value={props.colorGrading[zone].saturation}
                     min={0}
                     max={100}
@@ -1364,7 +1364,7 @@ export function Workspace(props: WorkspaceProps) {
                     }
                   />
                   <ControlRow
-                    label={`${zone} Luminance`}
+                    label={`${t(zone[0].toUpperCase() + zone.slice(1))} ${t('Luminance')}`}
                     value={props.colorGrading[zone].luminance}
                     min={-100}
                     max={100}
@@ -1376,7 +1376,7 @@ export function Workspace(props: WorkspaceProps) {
               ))}
 
               <ControlRow
-                label="Balance"
+                label={t('Balance')}
                 value={props.colorGrading.balance}
                 min={-100}
                 max={100}
@@ -1385,7 +1385,7 @@ export function Workspace(props: WorkspaceProps) {
                 }
               />
               <ControlRow
-                label="Blending"
+                label={t('Blending')}
                 value={props.colorGrading.blending}
                 min={0}
                 max={100}
@@ -1399,7 +1399,7 @@ export function Workspace(props: WorkspaceProps) {
           <section className="panel">
             <div className="panel-head">
               <h2>{t('Export History')}</h2>
-              <span>{exportHistory.length ? `${exportHistory.length} saved` : 'Empty'}</span>
+              <span>{exportHistory.length ? `${exportHistory.length} ${t('saved')}` : t('Empty')}</span>
             </div>
             <div className="panel-body">
               {exportHistory.length ? (
@@ -1441,17 +1441,17 @@ export function Workspace(props: WorkspaceProps) {
               <strong>Version {version}</strong>
               <span>
                 {version === 'A'
-                  ? 'Natural result'
+                  ? t('Natural result')
                   : version === 'B'
-                    ? 'Default style strength'
-                    : 'Stronger film style'}
+                    ? t('Default style strength')
+                    : t('Stronger film style')}
               </span>
             </button>
           ))}
         </section>
 
         <div className="footer-actions">
-          <button type="button">Apply to Engine</button>
+              <button type="button">{t('Apply to Engine')}</button>
           <button className="primary" type="button">
             Save as My LUT
           </button>
