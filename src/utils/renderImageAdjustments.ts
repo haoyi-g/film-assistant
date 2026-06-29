@@ -65,6 +65,18 @@ export type ImageAdjustments = {
   saturation: number
   hsl: HslAdjustments
   colorGrading: ColorGradingAdjustments
+  localMasks: Array<{
+    maskUrl: string
+    visible: boolean
+    adjustments: {
+      exposure: number
+      contrast: number
+      shadows: number
+      highlights: number
+      warmth: number
+      saturation: number
+    }
+  }>
 }
 
 type RenderImageOptions = {
@@ -267,9 +279,14 @@ export async function renderImageAdjustments(
   adjustments: ImageAdjustments,
   options: RenderImageOptions = {},
 ): Promise<Blob> {
-  const [image, cubeLut] = await Promise.all([
+  const [image, cubeLut, localMaskImages] = await Promise.all([
     loadImage(sourceUrl),
     adjustments.lutPath ? loadCubeLut(adjustments.lutPath) : undefined,
+    Promise.all(
+      adjustments.localMasks.map((mask) =>
+        mask.visible && mask.maskUrl ? loadImage(mask.maskUrl) : undefined,
+      ),
+    ),
   ])
 
   const maxRenderSize = options.maxRenderSize ?? DEFAULT_MAX_RENDER_SIZE
@@ -288,6 +305,21 @@ export async function renderImageAdjustments(
   context.drawImage(image, 0, 0, width, height)
   const imageData = context.getImageData(0, 0, width, height)
   const pixels = imageData.data
+  const localMaskLayers = localMaskImages.map((maskImage, layerIndex) => {
+    if (!maskImage) return undefined
+    const maskCanvas = document.createElement('canvas')
+    maskCanvas.width = width
+    maskCanvas.height = height
+    const maskContext = maskCanvas.getContext('2d', { willReadFrequently: true })
+    if (maskContext) {
+      maskContext.drawImage(maskImage, 0, 0, width, height)
+      return {
+        pixels: maskContext.getImageData(0, 0, width, height).data,
+        adjustments: adjustments.localMasks[layerIndex].adjustments,
+      }
+    }
+    return undefined
+  })
 
   const mix = normalizeSlider(adjustments.styleStrength)
   const shadowAmount = normalizeSlider(adjustments.shadowDensity)
@@ -349,6 +381,56 @@ export async function renderImageAdjustments(
     red = luma + (red - luma) * saturationScale
     green = luma + (green - luma) * saturationScale
     blue = luma + (blue - luma) * saturationScale
+
+    for (const localLayer of localMaskLayers) {
+      if (!localLayer) continue
+      const localMask = localLayer.pixels[index + 3] / 255
+      if (localMask <= 0) continue
+      const beforeLocalRed = red
+      const beforeLocalGreen = green
+      const beforeLocalBlue = blue
+      const local = localLayer.adjustments
+      const localExposure = 2 ** normalizeSignedSlider(local.exposure)
+      red *= localExposure
+      green *= localExposure
+      blue *= localExposure
+
+      const localContrast = 1 + normalizeSignedSlider(local.contrast) * 0.8
+      red = (red - 0.5) * localContrast + 0.5
+      green = (green - 0.5) * localContrast + 0.5
+      blue = (blue - 0.5) * localContrast + 0.5
+
+      let localLuma = 0.2126 * red + 0.7152 * green + 0.0722 * blue
+      const localShadowMask = (1 - clamp01(localLuma)) ** 2
+      const localShadowChange =
+        normalizeSignedSlider(local.shadows) * 0.35 * localShadowMask
+      red += localShadowChange
+      green += localShadowChange
+      blue += localShadowChange
+
+      localLuma = 0.2126 * red + 0.7152 * green + 0.0722 * blue
+      const localHighlightMask = clamp01(localLuma) ** 2
+      const localHighlightChange =
+        normalizeSignedSlider(local.highlights) * 0.35 * localHighlightMask
+      red += localHighlightChange
+      green += localHighlightChange
+      blue += localHighlightChange
+
+      const localWarmth = normalizeSignedSlider(local.warmth) * 0.08
+      red += localWarmth
+      blue -= localWarmth
+
+      localLuma = 0.2126 * red + 0.7152 * green + 0.0722 * blue
+      const localSaturation =
+        1 + normalizeSignedSlider(local.saturation) * 0.8
+      red = localLuma + (red - localLuma) * localSaturation
+      green = localLuma + (green - localLuma) * localSaturation
+      blue = localLuma + (blue - localLuma) * localSaturation
+
+      red = beforeLocalRed + (red - beforeLocalRed) * localMask
+      green = beforeLocalGreen + (green - beforeLocalGreen) * localMask
+      blue = beforeLocalBlue + (blue - beforeLocalBlue) * localMask
+    }
 
     const hslColor = applyHslMixer(red, green, blue, adjustments.hsl)
     red = hslColor.red

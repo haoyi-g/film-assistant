@@ -14,14 +14,14 @@ function loadExportImage(imageUrl: string): Promise<HTMLImageElement> {
   })
 }
 
-function canvasToJpegBlob(canvas: HTMLCanvasElement, quality: number) {
+function canvasToBlob(canvas: HTMLCanvasElement, quality: number, type: string) {
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (blob) => {
         if (blob) resolve(blob)
         else reject(new Error('Image export failed.'))
       },
-      'image/jpeg',
+      type,
       quality,
     )
   })
@@ -56,13 +56,20 @@ export async function exportImageFile({
   const context = canvas.getContext('2d')
   if (!context) throw new Error('Canvas is not available in this browser.')
 
-  context.fillStyle = '#000'
-  context.fillRect(0, 0, canvas.width, canvas.height)
+  const isPng = fileName.toLowerCase().endsWith('.png')
+  if (!isPng) {
+    context.fillStyle = '#000'
+    context.fillRect(0, 0, canvas.width, canvas.height)
+  }
 
   context.translate(canvas.width / 2, canvas.height / 2)
   context.rotate((normalizedRotation * Math.PI) / 180)
   context.drawImage(image, -image.width / 2, -image.height / 2)
 
-  const blob = await canvasToJpegBlob(canvas, quality)
+  const blob = await canvasToBlob(
+    canvas,
+    quality,
+    isPng ? 'image/png' : 'image/jpeg',
+  )
   downloadBlob(blob, fileName)
 }

@@ -77,6 +77,7 @@ export function useAdjustedImage(
   adjustments.saturation,
   adjustments.hsl,
   adjustments.colorGrading,
+  adjustments.localMasks,
 ])
 
   useEffect(

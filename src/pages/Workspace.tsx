@@ -5,6 +5,10 @@ import { styles, type StyleProfile } from '../data/mockStyles'
 import { useAdjustedImage } from '../hooks/useAdjustedImage'
 import { usePhotoAnalysis } from '../hooks/usePhotoAnalysis'
 import { exportImageFile } from '../utils/exportImageFile'
+import {
+  createPersonCutout,
+  type SkinToneAdjustments,
+} from '../utils/personCutout'
 import { renderImageAdjustments } from '../utils/renderImageAdjustments'
 import type {
   ColorGradingAdjustments,
@@ -64,6 +68,39 @@ type WorkspaceProps = {
 }
 
 type PreviewMode = 'original' | 'result' | 'compare'
+type LocalAdjustments = {
+  exposure: number
+  contrast: number
+  shadows: number
+  highlights: number
+  warmth: number
+  saturation: number
+}
+
+type LocalMaskLayer = {
+  id: string
+  name: string
+  maskUrl: string
+  visible: boolean
+  adjustments: LocalAdjustments
+}
+
+const createDefaultLocalAdjustments = (): LocalAdjustments => ({
+  exposure: 0,
+  contrast: 0,
+  shadows: 0,
+  highlights: 0,
+  warmth: 0,
+  saturation: 0,
+})
+
+const createMaskLayer = (index: number): LocalMaskLayer => ({
+  id: crypto.randomUUID(),
+  name: `Mask ${index}`,
+  maskUrl: '',
+  visible: true,
+  adjustments: createDefaultLocalAdjustments(),
+})
 
 
 type JpegRange = {
@@ -143,8 +180,32 @@ export function Workspace(props: WorkspaceProps) {
   const [previewMode, setPreviewMode] = useState<PreviewMode>('result')
   const [compareSplit, setCompareSplit] = useState(50)
   const [isExporting, setIsExporting] = useState(false)
+  const [isDetectingPerson, setIsDetectingPerson] = useState(false)
+  const [personCutoutUrl, setPersonCutoutUrl] = useState('')
+  const [personCutoutEnabled, setPersonCutoutEnabled] = useState(false)
+  const [personCutoutError, setPersonCutoutError] = useState<string | null>(null)
+  const [skinTone, setSkinTone] = useState<SkinToneAdjustments>({
+    warmth: 0,
+    tint: 0,
+    saturation: 0,
+    luminance: 0,
+  })
+  const [maskTool, setMaskTool] = useState<'off' | 'brush' | 'erase'>('off')
+  const [showLocalMask, setShowLocalMask] = useState(true)
+  const [brushSize, setBrushSize] = useState(70)
+  const [brushFeather, setBrushFeather] = useState(45)
+  const [localMasks, setLocalMasks] = useState<LocalMaskLayer[]>(() => [
+    createMaskLayer(1),
+  ])
+  const [activeMaskId, setActiveMaskId] = useState(() => localMasks[0].id)
   const [exportHistory, setExportHistory] = useState<ExportHistoryItem[]>([])
   const rawPreviewUrlRef = useRef('')
+  const personCutoutUrlRef = useRef('')
+  const localMaskCanvasRef = useRef<HTMLCanvasElement>(null)
+  const isDrawingMaskRef = useRef(false)
+  const lastMaskPointRef = useRef<{ x: number; y: number } | null>(null)
+  const activeMask =
+    localMasks.find((layer) => layer.id === activeMaskId) ?? localMasks[0]
 
   const effectivePreviewUrl = isRawSelected
     ? isReadingRaw
@@ -156,6 +217,7 @@ export function Workspace(props: WorkspaceProps) {
   useEffect(() => {
     return () => {
       if (rawPreviewUrlRef.current) URL.revokeObjectURL(rawPreviewUrlRef.current)
+      if (personCutoutUrlRef.current) URL.revokeObjectURL(personCutoutUrlRef.current)
     }
   }, [])
 
@@ -242,12 +304,30 @@ export function Workspace(props: WorkspaceProps) {
     saturation: props.saturation,
     hsl: props.hsl,
     colorGrading: props.colorGrading,
+    localMasks,
   }
 
   const { adjustedUrl, isRendering, renderError } = useAdjustedImage(
     effectivePreviewUrl,
     currentAdjustments,
   )
+
+  useEffect(() => {
+    if (personCutoutUrlRef.current) URL.revokeObjectURL(personCutoutUrlRef.current)
+    personCutoutUrlRef.current = ''
+    setPersonCutoutUrl('')
+    setPersonCutoutError(null)
+  }, [adjustedUrl])
+
+  useEffect(() => {
+    setPersonCutoutEnabled(false)
+    setMaskTool('off')
+    const firstLayer = createMaskLayer(1)
+    setLocalMasks([firstLayer])
+    setActiveMaskId(firstLayer.id)
+    const canvas = localMaskCanvasRef.current
+    canvas?.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height)
+  }, [effectivePreviewUrl])
 
   const analysisStatus = isAnalyzing
     ? 'Analyzing...'
@@ -269,7 +349,9 @@ export function Workspace(props: WorkspaceProps) {
     if (!effectivePreviewUrl) return
 
     const baseName = effectiveFileName.replace(/\.[^.]+$/, '') || 'photo'
-    const exportFileName = `${baseName}-film-preview.jpg`
+    const exportFileName = personCutoutEnabled
+      ? `${baseName}-person-edit.jpg`
+      : `${baseName}-film-preview.jpg`
 
     setIsExporting(true)
     let highQualityObjectUrl = ''
@@ -285,6 +367,16 @@ export function Workspace(props: WorkspaceProps) {
       )
 
       highQualityObjectUrl = URL.createObjectURL(highQualityBlob)
+
+      if (personCutoutEnabled) {
+        const cutoutBlob = await createPersonCutout(
+          highQualityObjectUrl,
+          skinTone,
+          highQualityObjectUrl,
+        )
+        URL.revokeObjectURL(highQualityObjectUrl)
+        highQualityObjectUrl = URL.createObjectURL(cutoutBlob)
+      }
 
       await exportImageFile({
         imageUrl: highQualityObjectUrl,
@@ -336,12 +428,188 @@ export function Workspace(props: WorkspaceProps) {
     setRotation((currentRotation) => (currentRotation + 90) % 360)
   }
 
-  const previewImageUrl =
-  previewMode === 'original'
-    ? effectivePreviewUrl
-    : adjustedUrl || effectivePreviewUrl
-
   const resultPreviewUrl = adjustedUrl || effectivePreviewUrl
+
+  const displayedResultUrl = personCutoutUrl || resultPreviewUrl
+
+  const previewImageUrl =
+    previewMode === 'original' ? effectivePreviewUrl : displayedResultUrl
+
+  const handlePersonCutout = () => {
+    if (personCutoutEnabled) {
+      URL.revokeObjectURL(personCutoutUrl)
+      personCutoutUrlRef.current = ''
+      setPersonCutoutUrl('')
+      setPersonCutoutEnabled(false)
+      return
+    }
+    if (!resultPreviewUrl) return
+    setPersonCutoutEnabled(true)
+    setPreviewMode('result')
+  }
+
+  useEffect(() => {
+    if (!personCutoutEnabled || !resultPreviewUrl) return
+    let cancelled = false
+    setIsDetectingPerson(true)
+    setPersonCutoutError(null)
+
+    const timer = window.setTimeout(() => {
+      createPersonCutout(resultPreviewUrl, skinTone, resultPreviewUrl)
+        .then((blob) => {
+          if (cancelled) return
+          const nextUrl = URL.createObjectURL(blob)
+          if (personCutoutUrlRef.current) {
+            URL.revokeObjectURL(personCutoutUrlRef.current)
+          }
+          personCutoutUrlRef.current = nextUrl
+          setPersonCutoutUrl(nextUrl)
+        })
+        .catch((error: unknown) => {
+          if (cancelled) return
+          const message =
+            error instanceof Error ? error.message : 'Person detection failed.'
+          setPersonCutoutError(message)
+          setPersonCutoutEnabled(false)
+          window.alert(message)
+        })
+        .finally(() => {
+          if (!cancelled) setIsDetectingPerson(false)
+        })
+    }, 120)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [personCutoutEnabled, resultPreviewUrl, skinTone])
+
+  const initializeLocalMask = (image: HTMLImageElement) => {
+    const canvas = localMaskCanvasRef.current
+    if (!canvas || !image.naturalWidth || !image.naturalHeight) return
+    const scale = Math.min(1, 1200 / Math.max(image.naturalWidth, image.naturalHeight))
+    const width = Math.max(1, Math.round(image.naturalWidth * scale))
+    const height = Math.max(1, Math.round(image.naturalHeight * scale))
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width
+      canvas.height = height
+      setLocalMasks((layers) =>
+        layers.map((layer) => ({ ...layer, maskUrl: '' })),
+      )
+    }
+  }
+
+  const getMaskPoint = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = event.currentTarget
+    const bounds = canvas.getBoundingClientRect()
+    return {
+      x: ((event.clientX - bounds.left) / bounds.width) * canvas.width,
+      y: ((event.clientY - bounds.top) / bounds.height) * canvas.height,
+    }
+  }
+
+  const drawMaskSegment = (
+    canvas: HTMLCanvasElement,
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+  ) => {
+    const context = canvas.getContext('2d')
+    if (!context || maskTool === 'off') return
+    const scaledSize = brushSize * (canvas.width / 1000)
+    context.save()
+    context.globalCompositeOperation =
+      maskTool === 'erase' ? 'destination-out' : 'source-over'
+    context.strokeStyle = '#ff3b30'
+    context.lineCap = 'round'
+    context.lineJoin = 'round'
+    context.lineWidth = Math.max(2, scaledSize * (1 - brushFeather / 200))
+    context.shadowColor = maskTool === 'erase' ? 'transparent' : '#ff3b30'
+    context.shadowBlur = scaledSize * (brushFeather / 100) * 0.45
+    context.beginPath()
+    context.moveTo(from.x, from.y)
+    context.lineTo(to.x, to.y)
+    context.stroke()
+    context.restore()
+  }
+
+  const handleMaskPointerDown = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (maskTool === 'off') return
+    event.currentTarget.setPointerCapture(event.pointerId)
+    isDrawingMaskRef.current = true
+    const point = getMaskPoint(event)
+    lastMaskPointRef.current = point
+    drawMaskSegment(event.currentTarget, point, point)
+  }
+
+  const handleMaskPointerMove = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawingMaskRef.current || !lastMaskPointRef.current) return
+    const point = getMaskPoint(event)
+    drawMaskSegment(event.currentTarget, lastMaskPointRef.current, point)
+    lastMaskPointRef.current = point
+  }
+
+  const finishMaskStroke = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!isDrawingMaskRef.current) return
+    isDrawingMaskRef.current = false
+    lastMaskPointRef.current = null
+    const maskUrl = event.currentTarget.toDataURL('image/png')
+    setLocalMasks((layers) =>
+      layers.map((layer) =>
+        layer.id === activeMaskId ? { ...layer, maskUrl } : layer,
+      ),
+    )
+  }
+
+  const clearLocalMask = () => {
+    const canvas = localMaskCanvasRef.current
+    canvas?.getContext('2d')?.clearRect(0, 0, canvas.width, canvas.height)
+    setLocalMasks((layers) =>
+      layers.map((layer) =>
+        layer.id === activeMaskId ? { ...layer, maskUrl: '' } : layer,
+      ),
+    )
+  }
+
+  const updateLocalAdjustment = (key: keyof LocalAdjustments, value: number) => {
+    setLocalMasks((layers) =>
+      layers.map((layer) =>
+        layer.id === activeMaskId
+          ? { ...layer, adjustments: { ...layer.adjustments, [key]: value } }
+          : layer,
+      ),
+    )
+  }
+
+  const addMaskLayer = () => {
+    const layer = createMaskLayer(localMasks.length + 1)
+    setLocalMasks((layers) => [...layers, layer])
+    setActiveMaskId(layer.id)
+  }
+
+  const removeActiveMaskLayer = () => {
+    if (localMasks.length === 1) {
+      clearLocalMask()
+      return
+    }
+    const index = localMasks.findIndex((layer) => layer.id === activeMaskId)
+    const nextLayers = localMasks.filter((layer) => layer.id !== activeMaskId)
+    setLocalMasks(nextLayers)
+    setActiveMaskId(nextLayers[Math.max(0, index - 1)].id)
+  }
+
+  useEffect(() => {
+    const canvas = localMaskCanvasRef.current
+    if (!canvas) return
+    const context = canvas.getContext('2d')
+    context?.clearRect(0, 0, canvas.width, canvas.height)
+    if (!activeMask?.maskUrl || !context) return
+    const image = new Image()
+    image.onload = () => {
+      context.clearRect(0, 0, canvas.width, canvas.height)
+      context.drawImage(image, 0, 0, canvas.width, canvas.height)
+    }
+    image.src = activeMask.maskUrl
+  }, [activeMaskId, activeMask?.maskUrl])
 
   return (
     <>
@@ -527,8 +795,51 @@ export function Workspace(props: WorkspaceProps) {
             </div>
 
             <div className="segmented">
-              <button type="button">Clipping</button>
-              <button type="button">Shadows</button>
+              <button
+                className={maskTool === 'brush' ? 'is-active' : ''}
+                type="button"
+                disabled={!effectivePreviewUrl}
+                onClick={() => {
+                  setMaskTool(maskTool === 'brush' ? 'off' : 'brush')
+                  setPreviewMode('result')
+                }}
+              >
+                Brush
+              </button>
+              <button
+                className={maskTool === 'erase' ? 'is-active' : ''}
+                type="button"
+                disabled={!effectivePreviewUrl}
+                onClick={() => {
+                  setMaskTool(maskTool === 'erase' ? 'off' : 'erase')
+                  setPreviewMode('result')
+                }}
+              >
+                Erase
+              </button>
+              <button
+                type="button"
+                disabled={!activeMask?.maskUrl}
+                onClick={() => setShowLocalMask((current) => !current)}
+              >
+                {showLocalMask ? 'Hide Mask' : 'Show Mask'}
+              </button>
+              <button type="button" disabled={!activeMask?.maskUrl} onClick={clearLocalMask}>
+                Clear Mask
+              </button>
+              <button
+                className={personCutoutEnabled ? 'is-active' : ''}
+                type="button"
+                disabled={!effectivePreviewUrl || isRendering || isDetectingPerson}
+                title={personCutoutError ?? undefined}
+                onClick={handlePersonCutout}
+              >
+                {isDetectingPerson
+                  ? 'Detecting...'
+                  : personCutoutEnabled
+                    ? 'Disable Person Edit'
+                    : 'Person Detection'}
+              </button>
               <button
                 type="button"
                 disabled={!effectivePreviewUrl}
@@ -562,7 +873,7 @@ export function Workspace(props: WorkspaceProps) {
               >
                 <img
                   className="compare-image"
-                  src={resultPreviewUrl}
+                  src={displayedResultUrl}
                   alt="Edited preview"
                 />
                 <img
@@ -596,12 +907,27 @@ export function Workspace(props: WorkspaceProps) {
                 />
               </div>
             ) : effectivePreviewUrl ? (
-              <img
-                className="main-preview"
-                src={previewImageUrl}
-                alt="Current edit preview"
+              <div
+                className="masked-preview-wrap"
                 style={{ transform: `rotate(${rotation}deg)` }}
-              />
+              >
+                <img
+                  className="main-preview"
+                  src={previewImageUrl}
+                  alt="Current edit preview"
+                  onLoad={(event) => initializeLocalMask(event.currentTarget)}
+                />
+                <canvas
+                  ref={localMaskCanvasRef}
+                  className={`local-mask-canvas ${
+                    showLocalMask ? 'is-visible' : ''
+                  } ${maskTool !== 'off' ? 'is-editing' : ''}`}
+                  onPointerDown={handleMaskPointerDown}
+                  onPointerMove={handleMaskPointerMove}
+                  onPointerUp={finishMaskStroke}
+                  onPointerCancel={finishMaskStroke}
+                />
+              </div>
             ) : (
               <div className="empty-state">
                 Upload a photo to preview the color workspace flow.
@@ -734,6 +1060,76 @@ export function Workspace(props: WorkspaceProps) {
           </div>
         </section>
         </div>
+
+        <section className="panel">
+          <div className="panel-head">
+            <h2>Local Mask Layers</h2>
+            <span>{localMasks.length} layer{localMasks.length === 1 ? '' : 's'}</span>
+          </div>
+          <div className="panel-body local-adjustment-grid">
+            <div>
+              <div className="mask-layer-actions">
+                <button type="button" onClick={addMaskLayer}>+ New Mask</button>
+                <button type="button" onClick={removeActiveMaskLayer}>
+                  {localMasks.length === 1 ? 'Reset' : 'Delete'}
+                </button>
+              </div>
+              <div className="mask-layer-list">
+                {localMasks.map((layer) => (
+                  <button
+                    className={layer.id === activeMaskId ? 'is-active' : ''}
+                    type="button"
+                    key={layer.id}
+                    onClick={() => setActiveMaskId(layer.id)}
+                  >
+                    <span>{layer.name}</span>
+                    <small>{layer.maskUrl ? 'Painted' : 'Empty'}</small>
+                    <input
+                      type="checkbox"
+                      checked={layer.visible}
+                      aria-label={`Toggle ${layer.name}`}
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={(event) => {
+                        const visible = event.target.checked
+                        setLocalMasks((layers) => layers.map((item) =>
+                          item.id === layer.id ? { ...item, visible } : item,
+                        ))
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+              <ControlRow
+                label="Brush Size"
+                value={brushSize}
+                min={10}
+                max={220}
+                onChange={setBrushSize}
+              />
+              <ControlRow
+                label="Brush Feather"
+                value={brushFeather}
+                min={0}
+                max={100}
+                onChange={setBrushFeather}
+              />
+            </div>
+            <div>
+              {(Object.keys(activeMask.adjustments) as Array<keyof LocalAdjustments>).map(
+                (key) => (
+                  <ControlRow
+                    key={key}
+                    label={`Local ${key[0].toUpperCase() + key.slice(1)}`}
+                    value={activeMask.adjustments[key]}
+                    min={-100}
+                    max={100}
+                    onChange={(value) => updateLocalAdjustment(key, value)}
+                  />
+                ),
+              )}
+            </div>
+          </div>
+        </section>
         </div>
 
         <aside className="column right-column">
@@ -825,6 +1221,51 @@ export function Workspace(props: WorkspaceProps) {
                 max={100}
                 onChange={props.onSaturationChange}
               />
+
+              {personCutoutEnabled && (
+                <div className="skin-tone-controls">
+                  <div className="control-section-title">
+                    <strong>Skin Tone</strong>
+                    <span>Skin only</span>
+                  </div>
+                  <ControlRow
+                    label="Skin Warmth"
+                    value={skinTone.warmth}
+                    min={-100}
+                    max={100}
+                    onChange={(value) =>
+                      setSkinTone((current) => ({ ...current, warmth: value }))
+                    }
+                  />
+                  <ControlRow
+                    label="Skin Tint"
+                    value={skinTone.tint}
+                    min={-100}
+                    max={100}
+                    onChange={(value) =>
+                      setSkinTone((current) => ({ ...current, tint: value }))
+                    }
+                  />
+                  <ControlRow
+                    label="Skin Saturation"
+                    value={skinTone.saturation}
+                    min={-100}
+                    max={100}
+                    onChange={(value) =>
+                      setSkinTone((current) => ({ ...current, saturation: value }))
+                    }
+                  />
+                  <ControlRow
+                    label="Skin Luminance"
+                    value={skinTone.luminance}
+                    min={-100}
+                    max={100}
+                    onChange={(value) =>
+                      setSkinTone((current) => ({ ...current, luminance: value }))
+                    }
+                  />
+                </div>
+              )}
             </div>
           </section>
 
