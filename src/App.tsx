@@ -3,6 +3,7 @@ import { styles, type StyleProfile } from './data/mockStyles'
 import { checkDesktopEngine, openLocalPhoto, runningInDesktop } from './native/desktop'
 import { StyleLearning } from './pages/StyleLearning'
 import { Workspace } from './pages/Workspace'
+import { LanguageProvider, type Language } from './i18n'
 import {
   createDefaultColorGrading,
   createDefaultHslAdjustments,
@@ -13,6 +14,9 @@ import {
 type AppView = 'workspace' | 'learning'
 
 export function App() {
+  const [language, setLanguage] = useState<Language>(() =>
+    window.localStorage.getItem('film-assistant-language') === 'zh' ? 'zh' : 'en',
+  )
   const [activeView, setActiveView] = useState<AppView>('workspace')
   const [fileName, setFileName] = useState('No photo selected')
   const [previewUrl, setPreviewUrl] = useState('')
@@ -153,11 +157,20 @@ export function App() {
     }))
   }
 
+  const changeLanguage = (nextLanguage: Language) => {
+    setLanguage(nextLanguage)
+    window.localStorage.setItem('film-assistant-language', nextLanguage)
+  }
+
+  const text = (english: string, chinese: string) =>
+    language === 'zh' ? chinese : english
+
   return (
+    <LanguageProvider language={language}>
     <main className="app-shell">
       <header className="app-header">
         <div>
-          <span className="eyebrow">LOCAL COLOR WORKSPACE</span>
+          <span className="eyebrow">{text('LOCAL COLOR WORKSPACE', '本地调色工作台')}</span>
           <h1>Film Assistant</h1>
         </div>
         <div className="desktop-tools">
@@ -167,22 +180,29 @@ export function App() {
               type="button"
               onClick={() => setActiveView('workspace')}
             >
-              Color Workspace
+              {text('Color Workspace', '调色工作台')}
             </button>
             <button
               className={activeView === 'learning' ? 'is-active' : ''}
               type="button"
               onClick={() => setActiveView('learning')}
             >
-              Style Learning
+              {text('Style Learning', '风格学习')}
             </button>
           </div>
           <div className="desktop-state">
             <span className={`status-dot ${desktop ? 'is-online' : ''}`} />
-            {desktop ? 'Desktop RAW engine' : 'Browser preview mode'}
+            {desktop ? text('Desktop RAW engine', '桌面 RAW 引擎') : text('Browser preview mode', '浏览器预览模式')}
           </div>
+          <label className="language-picker">
+            <span>{text('Language', '语言')}</span>
+            <select value={language} onChange={(event) => changeLanguage(event.target.value as Language)}>
+              <option value="zh">中文</option>
+              <option value="en">English</option>
+            </select>
+          </label>
           <button type="button" className="engine-test" onClick={handleDesktopHealthCheck}>
-            Test engine
+            {text('Test engine', '测试引擎')}
           </button>
         </div>
       </header>
@@ -231,5 +251,6 @@ export function App() {
         <StyleLearning />
       )}
     </main>
+    </LanguageProvider>
   )
 }

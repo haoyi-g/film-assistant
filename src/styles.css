@@ -15,6 +15,8 @@ button { color: inherit; cursor: pointer; }
 .app-header h1 { margin: 3px 0 0; font-size: 26px; font-weight: 620; letter-spacing: -.03em; }
 .eyebrow { color: #9da48e; font-size: 10px; letter-spacing: .2em; }
 .desktop-tools { display: flex; align-items: center; gap: 10px; }
+.language-picker { display: flex; align-items: center; gap: 6px; color: #a8aa9f; font-size: 10px; }
+.language-picker select { border: 1px solid #3b4036; border-radius: 6px; padding: 6px 8px; color: #e8e6df; background: #1d201c; }
 .app-view-tabs { display: flex; gap: 5px; padding: 4px; border: 1px solid #343832; border-radius: 999px; background: #151713; }
 .app-view-tabs button { border: 0; border-radius: 999px; padding: 7px 10px; background: transparent; color: #969b8e; font-size: 11px; }
 .app-view-tabs button.is-active { background: #c4d7a1; color: #11130e; }

@@ -1,4 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from 'react'
+import { useLanguage } from '../i18n'
 
 type OutputMode = 'lut' | 'recipe'
 type PreviewMode = 'original' | 'edited' | 'compare'
@@ -43,6 +44,7 @@ const learningSignals: LearningSignal[] = [
 ]
 
 export function StyleLearning() {
+  const { t } = useLanguage()
   const [originalImage, setOriginalImage] = useState<LearningImage | null>(null)
   const [editedImage, setEditedImage] = useState<LearningImage | null>(null)
   const [objectUrls, setObjectUrls] = useState<string[]>([])
@@ -96,8 +98,8 @@ export function StyleLearning() {
       <aside className="column">
         <section className="panel">
           <div className="panel-head">
-            <h2>Training Pair</h2>
-            <span>{canLearn ? 'Ready' : 'Need 2 images'}</span>
+            <h2>{t('Training Pair')}</h2>
+            <span>{canLearn ? t('Ready') : t('Need 2 images')}</span>
           </div>
 
           <div className="panel-body">
@@ -108,9 +110,9 @@ export function StyleLearning() {
                 onChange={(event) => createImageFromFile(event, setOriginalImage)}
               />
               <span>
-                Upload Original Photo
+                {t('Upload Original Photo')}
                 <br />
-                Before color grading
+                {t('Before color grading')}
               </span>
             </label>
 
@@ -138,9 +140,9 @@ export function StyleLearning() {
                 onChange={(event) => createImageFromFile(event, setEditedImage)}
               />
               <span>
-                Upload Edited Photo
+                {t('Upload Edited Photo')}
                 <br />
-                After color grading
+                {t('After color grading')}
               </span>
             </label>
 
@@ -165,7 +167,7 @@ export function StyleLearning() {
 
         <section className="panel">
           <div className="panel-head">
-            <h2>Learn As</h2>
+            <h2>{t('Learn As')}</h2>
             <span>{outputMode === 'lut' ? '.cube' : 'Recipe'}</span>
           </div>
 
@@ -208,8 +210,8 @@ export function StyleLearning() {
 
         <section className="panel">
           <div className="panel-head">
-            <h2>Style Name</h2>
-            <span>Required</span>
+            <h2>{t('Style Name')}</h2>
+            <span>{t('Required')}</span>
           </div>
 
           <div className="panel-body">
@@ -234,33 +236,33 @@ export function StyleLearning() {
               type="button"
               onClick={() => setPreviewMode('original')}
             >
-              Original
+              {t('Original')}
             </button>
             <button
               className={previewMode === 'edited' ? 'is-active' : ''}
               type="button"
               onClick={() => setPreviewMode('edited')}
             >
-              Edited
+              {t('Edited')}
             </button>
             <button
               className={previewMode === 'compare' ? 'is-active' : ''}
               type="button"
               onClick={() => setPreviewMode('compare')}
             >
-              Compare
+              {t('Compare')}
             </button>
           </div>
 
           <div className="segmented">
-            <button type="button">Auto Align</button>
+            <button type="button">{t('Auto Align')}</button>
             <button
               className="primary"
               type="button"
               disabled={!canLearn || !styleName.trim()}
               onClick={handleLearnStyle}
             >
-              {outputMode === 'lut' ? 'Generate LUT' : 'Save Style'}
+              {outputMode === 'lut' ? t('Generate LUT') : t('Save Style')}
             </button>
           </div>
         </div>
@@ -288,10 +290,10 @@ export function StyleLearning() {
                 <span />
               </div>
               <div className="compare-label compare-label-original">
-                Original
+                {t('Original')}
               </div>
               <div className="compare-label compare-label-result">
-                Edited
+                {t('Edited')}
               </div>
               <input
                 className="compare-slider"
@@ -320,8 +322,8 @@ export function StyleLearning() {
       <aside className="column right-column">
         <section className="panel">
           <div className="panel-head">
-            <h2>Learning Summary</h2>
-            <span>{canLearn ? 'Pair ready' : 'Waiting'}</span>
+            <h2>{t('Learning Summary')}</h2>
+            <span>{canLearn ? t('Pair ready') : t('Waiting')}</span>
           </div>
 
           <div className="panel-body metric-grid">
@@ -346,8 +348,8 @@ export function StyleLearning() {
 
         <section className="panel">
           <div className="panel-head">
-            <h2>Learned Difference</h2>
-            <span>Preview</span>
+            <h2>{t('Learned Difference')}</h2>
+            <span>{t('Preview')}</span>
           </div>
 
           <div className="panel-body">
@@ -367,8 +369,8 @@ export function StyleLearning() {
 
         <section className="panel">
           <div className="panel-head">
-            <h2>Generation Rules</h2>
-            <span>Safety</span>
+            <h2>{t('Generation Rules')}</h2>
+            <span>{t('Safety')}</span>
           </div>
 
           <div className="panel-body">

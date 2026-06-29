@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import * as exifr from 'exifr'
 import { ControlRow } from '../components/ControlRow'
+import { useLanguage } from '../i18n'
 import { styles, type StyleProfile } from '../data/mockStyles'
 import { useAdjustedImage } from '../hooks/useAdjustedImage'
 import { usePhotoAnalysis } from '../hooks/usePhotoAnalysis'
@@ -171,6 +172,7 @@ async function extractLargestEmbeddedJpeg(file: File): Promise<Blob | null> {
 }
 
 export function Workspace(props: WorkspaceProps) {
+  const { t } = useLanguage()
   const [rawPreviewUrl, setRawPreviewUrl] = useState('')
   const [selectedFileName, setSelectedFileName] = useState('')
   const [isRawSelected, setIsRawSelected] = useState(false)
@@ -617,15 +619,15 @@ export function Workspace(props: WorkspaceProps) {
         <aside className="column">
           <section className="panel">
             <div className="panel-head">
-              <h2>Input Photo</h2>
+              <h2>{t('Input Photo')}</h2>
               <span>
                 {isReadingRaw
-                  ? 'Reading RAW...'
+                  ? t('Reading RAW...')
                   : effectivePreviewUrl
-                    ? 'Loaded'
+                    ? t('Loaded')
                     : rawError
-                      ? 'Failed'
-                      : 'Waiting'}
+                      ? t('Failed')
+                      : t('Waiting')}
               </span>
             </div>
 
@@ -637,7 +639,7 @@ export function Workspace(props: WorkspaceProps) {
                   onChange={handleImageChange}
                 />
                 <span>
-                  Drop or click to upload a photo
+                  {t('Drop or click to upload a photo')}
                   <br />
                   JPG / PNG / WebP / RAW
                 </span>
@@ -649,7 +651,7 @@ export function Workspace(props: WorkspaceProps) {
                   type="button"
                   onClick={props.onOpenDesktopImage}
                 >
-                  Open RAW or photo from computer
+                  {t('Open RAW or photo from computer')}
                 </button>
               )}
 
@@ -659,7 +661,7 @@ export function Workspace(props: WorkspaceProps) {
                   type="button"
                   onClick={props.onTestDesktopEngine}
                 >
-                  Test desktop engine
+                  {t('Test desktop engine')}
                 </button>
               )}
 
@@ -695,17 +697,17 @@ export function Workspace(props: WorkspaceProps) {
 
           <section className="panel">
             <div className="panel-head">
-              <h2>LUT Source</h2>
+              <h2>{t('LUT Source')}</h2>
               <span>{props.selectedStyle.match}% match</span>
             </div>
 
             <div className="panel-body">
               <div className="tabs">
                 <button className="is-active" type="button">
-                  Official LUTs
+                  {t('Official LUTs')}
                 </button>
-                <button type="button">Mine</button>
-                <button type="button">Reference LUT</button>
+                <button type="button">{t('Mine')}</button>
+                <button type="button">{t('Reference LUT')}</button>
               </div>
 
               <button
@@ -716,8 +718,8 @@ export function Workspace(props: WorkspaceProps) {
                 onClick={() => props.onStyleChange(styles[0])}
               >
                 <div className="style-title">
-                  Restore Original
-                  <span>No LUT</span>
+                  {t('Restore Original')}
+                  <span>{t('No LUT')}</span>
                 </div>
                 <div className="chips">
                   <span className="chip">Reset all adjustments</span>
@@ -774,7 +776,7 @@ export function Workspace(props: WorkspaceProps) {
                 type="button"
                 onClick={() => setPreviewMode('original')}
               >
-                Original
+              {t('Original')}
               </button>
 
               <button
@@ -782,7 +784,7 @@ export function Workspace(props: WorkspaceProps) {
                 type="button"
                 onClick={() => setPreviewMode('result')}
               >
-                Result
+              {t('Result')}
               </button>
 
               <button
@@ -790,7 +792,7 @@ export function Workspace(props: WorkspaceProps) {
                 type="button"
                 onClick={() => setPreviewMode('compare')}
               >
-                Compare
+              {t('Compare')}
               </button>
             </div>
 
@@ -804,7 +806,7 @@ export function Workspace(props: WorkspaceProps) {
                   setPreviewMode('result')
                 }}
               >
-                Brush
+                {t('Brush')}
               </button>
               <button
                 className={maskTool === 'erase' ? 'is-active' : ''}
@@ -815,17 +817,17 @@ export function Workspace(props: WorkspaceProps) {
                   setPreviewMode('result')
                 }}
               >
-                Erase
+                {t('Erase')}
               </button>
               <button
                 type="button"
                 disabled={!activeMask?.maskUrl}
                 onClick={() => setShowLocalMask((current) => !current)}
               >
-                {showLocalMask ? 'Hide Mask' : 'Show Mask'}
+                {showLocalMask ? t('Hide Mask') : t('Show Mask')}
               </button>
               <button type="button" disabled={!activeMask?.maskUrl} onClick={clearLocalMask}>
-                Clear Mask
+                {t('Clear Mask')}
               </button>
               <button
                 className={personCutoutEnabled ? 'is-active' : ''}
@@ -835,24 +837,24 @@ export function Workspace(props: WorkspaceProps) {
                 onClick={handlePersonCutout}
               >
                 {isDetectingPerson
-                  ? 'Detecting...'
+                  ? t('Detecting...')
                   : personCutoutEnabled
-                    ? 'Disable Person Edit'
-                    : 'Person Detection'}
+                    ? t('Disable Person Edit')
+                    : t('Person Detection')}
               </button>
               <button
                 type="button"
                 disabled={!effectivePreviewUrl}
                 onClick={rotateLeft}
               >
-                Rotate left
+                {t('Rotate left')}
               </button>
               <button
                 type="button"
                 disabled={!effectivePreviewUrl}
                 onClick={rotateRight}
               >
-                Rotate right
+                {t('Rotate right')}
               </button>
               <button
                 className="primary"
@@ -860,7 +862,7 @@ export function Workspace(props: WorkspaceProps) {
                 disabled={!effectivePreviewUrl || isRendering || isExporting}
                 onClick={handleExportPreview}
               >
-                {isExporting ? 'Saving...' : 'Export Preview'}
+                {isExporting ? t('Saving...') : t('Export Preview')}
               </button>
             </div>
           </div>
@@ -939,8 +941,8 @@ export function Workspace(props: WorkspaceProps) {
         <div className="color-tools-row">
         <section className="panel">
           <div className="panel-head">
-            <h2>HSL Color Mixer</h2>
-            <span>Selective colour</span>
+            <h2>{t('HSL Color Mixer')}</h2>
+            <span>{t('Selective colour')}</span>
           </div>
           <div className="panel-body hsl-mixer">
             {!effectivePreviewUrl ? (
@@ -994,8 +996,8 @@ export function Workspace(props: WorkspaceProps) {
 
         <section className="panel">
           <div className="panel-head">
-            <h2>Color Grading</h2>
-            <span>Light zones</span>
+            <h2>{t('Color Grading')}</h2>
+            <span>{t('Light zones')}</span>
           </div>
           <div className="panel-body color-grading">
             {(['shadows', 'midtones', 'highlights'] as const).map((zone) => (
@@ -1063,15 +1065,15 @@ export function Workspace(props: WorkspaceProps) {
 
         <section className="panel">
           <div className="panel-head">
-            <h2>Local Mask Layers</h2>
+            <h2>{t('Local Mask Layers')}</h2>
             <span>{localMasks.length} layer{localMasks.length === 1 ? '' : 's'}</span>
           </div>
           <div className="panel-body local-adjustment-grid">
             <div>
               <div className="mask-layer-actions">
-                <button type="button" onClick={addMaskLayer}>+ New Mask</button>
+                <button type="button" onClick={addMaskLayer}>+ {t('New Mask')}</button>
                 <button type="button" onClick={removeActiveMaskLayer}>
-                  {localMasks.length === 1 ? 'Reset' : 'Delete'}
+                  {localMasks.length === 1 ? t('Reset') : t('Delete')}
                 </button>
               </div>
               <div className="mask-layer-list">
@@ -1083,7 +1085,7 @@ export function Workspace(props: WorkspaceProps) {
                     onClick={() => setActiveMaskId(layer.id)}
                   >
                     <span>{layer.name}</span>
-                    <small>{layer.maskUrl ? 'Painted' : 'Empty'}</small>
+                    <small>{layer.maskUrl ? t('Painted') : t('Empty')}</small>
                     <input
                       type="checkbox"
                       checked={layer.visible}
@@ -1100,14 +1102,14 @@ export function Workspace(props: WorkspaceProps) {
                 ))}
               </div>
               <ControlRow
-                label="Brush Size"
+                label={t('Brush Size')}
                 value={brushSize}
                 min={10}
                 max={220}
                 onChange={setBrushSize}
               />
               <ControlRow
-                label="Brush Feather"
+                label={t('Brush Feather')}
                 value={brushFeather}
                 min={0}
                 max={100}
@@ -1135,7 +1137,7 @@ export function Workspace(props: WorkspaceProps) {
         <aside className="column right-column">
           <section className="panel">
             <div className="panel-head">
-              <h2>Current Analysis</h2>
+              <h2>{t('Current Analysis')}</h2>
               <span title={analysisError ?? undefined}>{analysisStatus}</span>
             </div>
 
@@ -1396,7 +1398,7 @@ export function Workspace(props: WorkspaceProps) {
 
           <section className="panel">
             <div className="panel-head">
-              <h2>Export History</h2>
+              <h2>{t('Export History')}</h2>
               <span>{exportHistory.length ? `${exportHistory.length} saved` : 'Empty'}</span>
             </div>
             <div className="panel-body">
